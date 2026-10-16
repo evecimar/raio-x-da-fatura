@@ -6,6 +6,8 @@ name: Release
 on:
   push:
     branches: [main]
+  # Botão "Run workflow" (aba Actions): republica só o site com a última release, sem criar release nova.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -21,6 +23,7 @@ jobs:
   release:
     name: release
     needs: testes
+    if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -63,8 +66,10 @@ jobs:
   # Para ligar (uma vez): Settings › Pages › Source: "GitHub Actions".
   site:
     name: site
-    needs: release
-    if: ${{ !github.event.repository.private }}
+    needs: [testes, release]
+    # Roda depois da release (ou sem ela, no botão manual). Pula se o repositório for privado:
+    # no plano gratuito o Pages só funciona em repositório público.
+    if: ${{ always() && needs.testes.result == 'success' && (needs.release.result == 'success' || needs.release.result == 'skipped') && github.event.repository.visibility == 'public' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

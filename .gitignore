@@ -1,0 +1,44 @@
+# Nunca publique faturas, notas ou exportações reais — em qualquer formato e com qualquer caixa de letra
+*.[pP][dD][fF]
+*.[jJ][pP][gG]
+*.[jJ][pP][eE][gG]
+*.[pP][nN][gG]
+*.[wW][eE][bB][pP]
+*.[hH][eE][iI][cCfF]
+*.[gG][iI][fF]
+*.[bB][mM][pP]
+*.[tT][iI][fF]
+*.[tT][iI][fF][fF]
+*.[xX][mM][lL]
+*.[cC][sS][vV]
+*.[oO][fF][xX]
+*.[xX][lL][sS]
+*.[xX][lL][sS][xX]
+*.zip
+*.7z
+*.rar
+# backups e CSVs baixados do próprio app
+raio-x-da-fatura-*.json
+# pastas com arquivos reais, em qualquer nível
+faturas/
+notas/
+minhas-faturas/
+!testes/casos/notas/
+.env
+.env.*
+
+node_modules/
+
+# arquivos antigos que saíram do projeto (pode apagar a pasta)
+/_to_delete/
+
+# Gerado pelos testes e pela release (PDFs fictícios, relatórios, capturas, pacote)
+testes/.gerado/
+dist/
+test-results/
+playwright-report/
+
+# exceção: os casos FICTÍCIOS dos testes (ficam no fim para valer sobre as regras acima)
+!testes/casos/faturas/
+!testes/casos/notas/
+!testes/casos/notas/*.xml

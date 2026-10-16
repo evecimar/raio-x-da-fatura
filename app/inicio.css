@@ -1,0 +1,72 @@
+/* Raio-X da Fatura — tela inicial e controles do topo */
+.rx-inicio { max-width: 46rem; margin: 0 auto; padding: clamp(16px, 5vw, 56px) clamp(16px, 4vw, 24px) 64px; font-family: var(--font-sans); color: var(--color-fg); }
+.rx-marca { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.rx-logo { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; color: #fff; font-family: var(--font-serif); font-size: 22px;
+  background: linear-gradient(135deg, #4B0675, #8A05BE 55%, #B23CF2); box-shadow: 0 10px 24px -12px rgba(110, 10, 170, .7); }
+.rx-marca b { font-family: var(--font-serif); font-weight: 400; font-size: 1.6rem; letter-spacing: -.01em; }
+.rx-inicio h1 { font-family: var(--font-serif); font-weight: 400; font-size: clamp(1.9rem, 5vw, 2.6rem); line-height: 1.1; margin: 0 0 12px; letter-spacing: -.015em; }
+.rx-inicio h1 em { font-style: normal; color: #8A05BE; }
+.rx-inicio > p.rx-lede { color: var(--color-fg-muted); font-size: 1.05rem; line-height: 1.55; margin: 0 0 28px; }
+.rx-zona { border: 2px dashed color-mix(in srgb, #8A05BE 35%, var(--color-border-line)); border-radius: 22px; padding: clamp(22px, 5vw, 40px); text-align: center;
+  background: radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, #B23CF2 10%, transparent), transparent 55%), var(--color-panel); transition: border-color .2s, background .2s; }
+.rx-zona.arrastando { border-color: #8A05BE; background: color-mix(in srgb, #8A05BE 8%, var(--color-panel)); }
+.rx-zona .rx-ico { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 16px; display: grid; place-items: center; background: color-mix(in srgb, #8A05BE 12%, transparent); color: #8A05BE; }
+.rx-zona h2 { margin: 0 0 6px; font-size: 1.15rem; font-weight: 600; }
+.rx-zona p { margin: 0 0 20px; color: var(--color-fg-muted); font-size: .95rem; }
+.rx-botoes { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.rx-btn { font: inherit; font-weight: 600; font-size: .95rem; border: 0; cursor: pointer; border-radius: 999px; padding: 12px 22px; color: #fff;
+  background: linear-gradient(135deg, #7A04A8, #8A05BE 50%, #A63BE6); box-shadow: 0 10px 22px -12px rgba(110, 10, 170, .8); }
+.rx-btn:hover { filter: brightness(1.08); }
+.rx-btn.sec { color: var(--color-fg); background: var(--color-panel); border: 1px solid var(--color-border-line); box-shadow: none; }
+.rx-btn:focus-visible, .rx-btn-ghost:focus-visible, .rx-select:focus-visible { outline: 2px solid #B23CF2; outline-offset: 2px; }
+.rx-links { margin-top: 18px; font-size: .9rem; color: var(--color-fg-muted); display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+.rx-links a, .rx-links button { color: #8A05BE; background: none; border: 0; font: inherit; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+.rx-bancos { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 18px; }
+.rx-bancos span { font-size: .8rem; padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--color-fg) 6%, transparent); color: var(--color-fg-muted); }
+.rx-progresso { margin-top: 24px; }
+.rx-progresso ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rx-arq { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 2px 10px; padding: 12px 14px; border-radius: 14px; background: var(--color-panel); border: 1px solid var(--color-border-line); }
+.rx-arq-ico { grid-row: span 2; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #fff; }
+.rx-arq.ok .rx-arq-ico { background: #12B76A; } .rx-arq.ok .rx-arq-ico::before { content: "✓"; }
+.rx-arq.aviso .rx-arq-ico { background: #F79009; } .rx-arq.aviso .rx-arq-ico::before { content: "!"; }
+.rx-arq.erro .rx-arq-ico { background: #F04438; } .rx-arq.erro .rx-arq-ico::before { content: "×"; }
+.rx-arq.lendo .rx-arq-ico { border: 2px solid color-mix(in srgb, #8A05BE 30%, transparent); border-top-color: #8A05BE; animation: rx-gira .8s linear infinite; }
+@keyframes rx-gira { to { transform: rotate(360deg); } }
+.rx-arq-nome { font-weight: 600; font-size: .92rem; overflow-wrap: anywhere; }
+.rx-arq-det { font-size: .85rem; color: var(--color-fg-muted); }
+.rx-resumo { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border-radius: 14px; background: color-mix(in srgb, #8A05BE 8%, var(--color-panel)); }
+.rx-privacidade { margin-top: 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: 12px; }
+.rx-privacidade div { padding: 14px 16px; border-radius: 14px; border: 1px solid var(--color-border-line); background: var(--color-panel); font-size: .88rem; color: var(--color-fg-muted); line-height: 1.5; }
+.rx-privacidade b { display: block; color: var(--color-fg); margin-bottom: 2px; font-size: .92rem; }
+dialog.rx-dialog { border: 1px solid var(--color-border-line); border-radius: 18px; padding: 22px; max-width: min(92vw, 26rem); background: var(--color-panel); color: var(--color-fg); font-family: var(--font-sans); box-shadow: 0 30px 60px -20px rgba(30, 0, 60, .45); }
+dialog.rx-dialog::backdrop { background: rgba(20, 8, 36, .45); backdrop-filter: blur(2px); }
+.rx-dialog h3 { margin: 0 0 6px; font-size: 1.1rem; } .rx-dialog p { margin: 0 0 14px; color: var(--color-fg-muted); font-size: .9rem; }
+.rx-dialog input { width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--color-border-line); background: var(--color-bg); color: var(--color-fg); margin-bottom: 14px; }
+.rx-dialog .rx-erro { color: var(--color-bad); }
+.rx-dialog menu { display: flex; justify-content: flex-end; gap: 8px; margin: 0; padding: 0; }
+/* Controles dentro do topo violeta do painel */
+#rx-controles { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; position: relative; z-index: 1; }
+.rx-ctl-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+.rx-select { font: inherit; font-weight: 600; font-size: .92rem; color: #fff; background: rgba(255, 255, 255, .16); border: 1px solid rgba(255, 255, 255, .35); border-radius: 999px; padding: 8px 34px 8px 14px; cursor: pointer;
+  appearance: none; background-image: linear-gradient(45deg, transparent 50%, #fff 50%), linear-gradient(135deg, #fff 50%, transparent 50%); background-position: calc(100% - 18px) 55%, calc(100% - 13px) 55%; background-size: 5px 5px; background-repeat: no-repeat; }
+.rx-select option { color: #1D1B22; }
+.rx-btn-ghost { font: inherit; font-size: .85rem; color: #fff; text-decoration: none; background: transparent; border: 1px solid rgba(255, 255, 255, .35); border-radius: 999px; padding: 7px 12px; cursor: pointer; }
+.rx-btn-ghost:hover { background: rgba(255, 255, 255, .14); }
+.rx-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+[hidden] { display: none !important; }
+
+/* Dados e backup */
+dialog.rx-dados { max-width: min(94vw, 34rem); }
+.rx-dados h4 { margin: 14px 0 4px; font-size: .95rem; }
+.rx-dados p { margin: 0 0 10px; font-size: .9rem; }
+.rx-dados .rx-fraco { color: var(--color-fg-muted); font-size: .85rem; }
+.rx-dados hr { border: 0; border-top: 1px solid var(--color-border-line); margin: 14px 0; }
+.rx-check { display: flex; gap: 8px; align-items: flex-start; font-size: .9rem; margin: 6px 0 10px; cursor: pointer; }
+.rx-check input { width: auto; margin: 2px 0 0; accent-color: #8A05BE; }
+.rx-linha-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.rx-linha-botoes .rx-btn { padding: 9px 16px; font-size: .88rem; }
+.rx-msg { min-height: 1.2em; margin-top: 10px; color: #8A05BE; font-size: .88rem; }
+.rx-dados menu { justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.rx-btn-perigo { font: inherit; font-size: .85rem; cursor: pointer; border-radius: 999px; padding: 9px 14px; background: transparent; color: var(--color-bad); border: 1px solid color-mix(in srgb, var(--color-bad) 45%, transparent); }
+.rx-btn-perigo:hover { background: color-mix(in srgb, var(--color-bad) 8%, transparent); }
+.rx-btn-orig { font: inherit; font-size: var(--cds-font-size-caption, .8rem); cursor: pointer; border: 0; background: none; color: #8A05BE; text-decoration: underline; text-underline-offset: 3px; padding: 0; }

@@ -1,0 +1,32 @@
+{
+  "name": "raio-x-da-fatura",
+  "version": "0.2.0",
+  "description": "Leia as faturas de cartão de crédito de uma pasta e veja quanto pagar, o que pagar primeiro e onde cortar. 100% offline.",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "test": "npm run privacidade && npm run lint && npm run tipos && npm run test:unit && npm run test:tela",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
+    "test:tela": "playwright test",
+    "lint": "eslint .",
+    "tipos": "tsc -p tsconfig.json",
+    "testar": "node ferramentas/testar.js",
+    "montar": "node ferramentas/montar.js",
+    "novo-leitor": "node ferramentas/novo-leitor.js",
+    "versao": "node ferramentas/versao.js",
+    "empacotar": "node ferramentas/empacotar.js",
+    "privacidade": "node ferramentas/verificar-privacidade.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.13.0",
+    "@playwright/test": "1.56.0",
+    "@xmldom/xmldom": "^0.9.5",
+    "eslint": "9.13.0",
+    "globals": "15.11.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "3.11.174",
+    "typescript": "5.6.3",
+    "vitest": "2.1.4"
+  }
+}

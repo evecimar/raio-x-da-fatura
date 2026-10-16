@@ -1,0 +1,101 @@
+# Release: a cada merge na main, valida de novo, publica uma release com o app pronto para usar (.zip)
+# e atualiza o site no GitHub Pages (quando o repositório for público).
+# Versão: a do package.json; se já foi publicada, sobe o último número (0.2.0 → 0.2.1). Veja ferramentas/versao.js.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  testes:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: release
+    needs: testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # precisa das tags para saber a próxima versão
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Próxima versão
+        id: versao
+        run: echo "versao=$(node ferramentas/versao.js)" >> "$GITHUB_OUTPUT"
+
+      - name: Empacotar o app
+        id: pacote
+        run: |
+          pasta=$(node ferramentas/empacotar.js "${{ steps.versao.outputs.versao }}")
+          nome=$(basename "$pasta")
+          (cd dist && zip -qr "$nome.zip" "$nome")
+          echo "zip=dist/$nome.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Publicar a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSAO: ${{ steps.versao.outputs.versao }}
+        run: |
+          gh release create "v$VERSAO" "${{ steps.pacote.outputs.zip }}" \
+            --target "$GITHUB_SHA" \
+            --title "Raio-X da Fatura v$VERSAO" \
+            --generate-notes \
+            --notes "Baixe o .zip abaixo, descompacte e abra o index.html com um duplo clique. Tudo funciona sem internet."
+
+  # Site: a mesma versão da release, publicada no GitHub Pages, para usar sem baixar nada.
+  # O app roda inteiro no navegador de quem acessa: as faturas nunca são enviadas para o GitHub.
+  # No plano gratuito o Pages só funciona em repositório público; enquanto for privado, este job é pulado.
+  # Para ligar (uma vez): Settings › Pages › Source: "GitHub Actions".
+  site:
+    name: site
+    needs: release
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.publicar.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # precisa da tag que a release acabou de criar
+
+      - run: git fetch --tags --force
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Montar o site (mesmo conteúdo do zip da release)
+        run: |
+          versao=$(git describe --tags --abbrev=0 --match 'v*' | sed 's/^v//')
+          pasta=$(node ferramentas/empacotar.js "$versao" --site)
+          mv "$pasta" site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Publicar no GitHub Pages
+        id: publicar
+        uses: actions/deploy-pages@v4

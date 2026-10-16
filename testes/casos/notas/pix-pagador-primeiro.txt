@@ -1,0 +1,12 @@
+Comprovante de Pix
+Pix enviado
+05/10/2026 14:02
+Valor: R$ 75,00
+Dados do pagador
+Nome: Ana Exemplo Souza
+CPF: ***.111.222-**
+Instituição: Banco Exemplo
+Dados do recebedor
+Nome: Feira do Bairro Exemplo
+CNPJ: 00.000.000/0001-00
+Instituição: Banco Exemplo 2

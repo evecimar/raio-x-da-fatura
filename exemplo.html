@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raio-X da Fatura · exemplo</title>
+<meta name="description" content="Raio-X da Fatura: leia as faturas de cartão da sua pasta e veja quanto pagar, o que pagar primeiro e onde cortar. Open source e 100% offline.">
+<link rel="stylesheet" href="app/tema.css">
+<link rel="stylesheet" href="app/estilo.css">
+<link rel="stylesheet" href="app/inicio.css">
+<link rel="stylesheet" href="app/despesas.css">
+</head>
+<body>
+
+<div id="dash-root" hidden>
+<div class="rx" id="rx-root">
+  <header class="top" id="topo">
+    <div class="top-row">
+      <div class="top-tit">
+        <h1>Raio-X da Fatura</h1>
+        <p class="top-mes" id="rx-mes">&nbsp;</p>
+      </div>
+      <div class="rx-controles" id="rx-controles"></div>
+    </div>
+    <div class="rx-visoes" id="rx-visoes"></div>
+    <p class="lede" id="takeaway"><span class="dash-skeleton">—</span></p>
+  </header>
+
+  <div class="rx-visao" id="rx-visao-faturas">
+  <section class="sec" id="analise">
+    <div class="sec-head">
+      <h2>O que as faturas mostram</h2>
+      <p id="an-sub">Onde o dinheiro foi e o que merece atenção.</p>
+    </div>
+    <div class="an-lead" id="an-lead" hidden>
+      <div class="ic" aria-hidden="true">!</div>
+      <p id="an-lead-txt"></p>
+    </div>
+    <div class="an-grid" id="an-grid"></div>
+  </section>
+
+  <section class="sec" id="faturas">
+    <div class="sec-head">
+      <h2>Cada fatura</h2>
+      <p>Ordenadas pelo vencimento. A barra mostra quanto do limite de cada cartão já está tomado.</p>
+    </div>
+    <div class="grid3" id="bank-cards"></div>
+  </section>
+
+  <section class="now" id="agora" aria-labelledby="agora-t">
+    <div class="now-plan">
+      <header>
+        <h2 id="agora-t">O que pagar primeiro</h2>
+        <p id="plan-sub">Pela ordem: as vencidas, começando pelos juros mais altos, depois a que vence antes.</p>
+      </header>
+      <ol class="steps" id="plan"></ol>
+    </div>
+    <div class="now-total">
+      <div class="lab" id="total-lab">Total das faturas do mês</div>
+      <div class="hero-num" id="total-num">—</div>
+      <div class="stackbar" id="mix" aria-label="Composição do total por banco"></div>
+      <ul class="keys" id="mix-keys"></ul>
+    </div>
+  </section>
+
+  <section class="kpis" id="numeros" aria-label="Números-chave"></section>
+
+  <section class="sec" id="atencao">
+    <div class="sec-head">
+      <h2>Onde cortar</h2>
+      <p>Os gastos que mais pesam e as cobranças que valem uma conferida.</p>
+    </div>
+    <ul class="cuts" id="alerts"></ul>
+  </section>
+
+  <section class="sec" id="evolucao" hidden>
+    <div class="sec-head">
+      <h2>Evolução mês a mês</h2>
+      <p id="evo-sub">Total das faturas de cada mês, empilhado por banco. O mês selecionado aparece em destaque.</p>
+    </div>
+    <div class="evo-grid">
+      <div class="card" id="evo-card">
+        <div class="legend" id="evo-legend"></div>
+        <div class="chartbox evo-box" id="evo-chart"><div class="tip" id="evo-tip"></div></div>
+        <ul class="evo-resumo" id="evo-resumo" aria-label="Total de cada mês"></ul>
+      </div>
+      <div class="card" id="evo-var">
+        <div class="card-title">
+          <h3>O que mudou por categoria</h3>
+          <p id="evo-var-sub">Compras do mês selecionado contra o mês anterior, sem estornos.</p>
+        </div>
+        <div id="evo-var-body"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid2" aria-label="Análises">
+    <div class="card" id="categorias">
+      <div class="card-title">
+        <h3>Gastos por categoria</h3>
+        <p id="cat-sub">Compras do mês, sem estornos.</p>
+      </div>
+      <div class="hbars" id="cat-bars"></div>
+    </div>
+    <div class="card" id="quem">
+      <div class="card-title">
+        <h3>Quem gastou</h3>
+        <p>Compras por portador e cartão, sem estornos. A cor é a do banco.</p>
+      </div>
+      <div class="hbars" id="port-bars"></div>
+    </div>
+  </section>
+
+  <section class="card" id="dia-a-dia">
+    <div class="card-title">
+      <h3>Compras à vista dia a dia</h3>
+      <p id="dia-sub">Somente compras sem parcela, empilhadas por banco. O dia mais alto leva o valor em cima.</p>
+    </div>
+    <div class="legend" id="dia-legend"></div>
+    <div class="chartbox" id="dia-chart"><div class="tip" id="dia-tip"></div></div>
+  </section>
+
+  <section class="card" id="lancamentos">
+    <div class="card-title">
+      <h3>Todos os lançamentos</h3>
+      <p>Em verde, estornos e créditos. Toque no cabeçalho para ordenar.</p>
+    </div>
+    <div class="tools">
+      <input type="search" class="search" id="q" placeholder="Buscar descrição, loja, categoria ou portador" aria-label="Buscar">
+      <div class="seg" id="f-banco" role="group" aria-label="Banco"></div>
+      <select class="select" id="f-cat" aria-label="Categoria"><option value="">Todas as categorias</option></select>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="tablebox">
+      <table id="tx">
+        <thead><tr>
+          <th data-field="data"><button type="button" data-k="data">Data</button></th>
+          <th data-field="mes" class="hide-sm col-mes"><button type="button" data-k="mes">Fatura</button></th>
+          <th data-field="banco" class="hide-sm"><button type="button" data-k="banco">Banco</button></th>
+          <th data-field="cartao" class="hide-md"><button type="button" data-k="cartao">Cartão</button></th>
+          <th data-field="portador" class="hide-sm"><button type="button" data-k="portador">Portador</button></th>
+          <th data-field="descricao"><button type="button" data-k="descricao">Descrição</button></th>
+          <th data-field="estabelecimento" class="hide-md col-estab"><button type="button" data-k="estabelecimento">Estabelecimento</button></th>
+          <th data-field="categoria" class="hide-sm"><button type="button" data-k="categoria">Categoria</button></th>
+          <th data-field="parcela" class="hide-sm"><button type="button" data-k="parcela">Parcela</button></th>
+          <th data-field="valor" class="r"><button type="button" data-k="valor">Valor</button></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  </div>
+
+  <footer class="rx-footer"><span>Raio-X da Fatura · painel open source de faturas de cartão</span><span>Seus dados ficam só no seu computador.</span></footer>
+</div>
+
+<!-- Visão "Despesas": notas fiscais, cupons e gastos fora do cartão. despesas.js move este bloco para dentro do painel (#rx-root). -->
+<div id="rx-despesas-parte" hidden>
+  <div class="rx-visao rx-desp" id="rx-visao-despesas" hidden>
+    <section class="sec" id="dp-resumo">
+      <div class="sec-head">
+        <h2 id="dp-titulo">Despesas</h2>
+        <p id="dp-sub"></p>
+      </div>
+      <div class="dp-dica" id="dp-dica" hidden></div>
+      <div class="card dp-intro" id="dp-intro" hidden></div>
+      <div class="kpis dp-kpis" id="dp-kpis"></div>
+    </section>
+
+    <section class="sec" id="dp-atencao" hidden>
+      <div class="sec-head">
+        <h2>Precisa da sua atenção</h2>
+        <p>Notas que a leitura não entendeu direito ou compras no crédito sem lançamento ligado.</p>
+      </div>
+      <ul class="dp-atencao" id="dp-atencao-lista"></ul>
+    </section>
+
+    <section class="grid2" id="dp-graficos" aria-label="Como e com o que você gastou">
+      <div class="card" id="dp-formas-card">
+        <div class="card-title">
+          <h3>Como vai ser pago</h3>
+          <p id="dp-formas-sub">Cartão de crédito e gastos fora dele.</p>
+        </div>
+        <div class="stackbar dp-stack" id="dp-formas-bar" aria-hidden="true"></div>
+        <ul class="dp-formas" id="dp-formas"></ul>
+      </div>
+      <div class="card" id="dp-cats-card">
+        <div class="card-title">
+          <h3>Por categoria</h3>
+          <p id="dp-cats-sub">Cartão e despesas fora dele, sem contar duas vezes a nota ligada a um lançamento.</p>
+        </div>
+        <div class="hbars dp-hbars" id="dp-cats"></div>
+      </div>
+    </section>
+
+    <section class="sec" id="dp-mensal" hidden>
+      <div class="sec-head">
+        <h2>Mês a mês</h2>
+        <p>Pelo mês em que a compra foi feita, pelo valor total (parceladas também), sem tarifas e juros. “Parcial” = falta a fatura onde estão as compras à vista daquele mês.</p>
+      </div>
+      <div class="card"><div id="dp-mensal-body"></div></div>
+    </section>
+
+    <section class="sec" id="dp-notas-sec">
+      <div class="dp-notas-head">
+        <div class="sec-head">
+          <h2>Notas e cupons</h2>
+          <p id="dp-notas-sub"></p>
+        </div>
+        <div class="dp-acoes">
+          <button type="button" class="dp-btn dp-btn-pri" id="dp-nova">+ Despesa à mão</button>
+          <button type="button" class="dp-btn" id="dp-csv">Baixar CSV das notas</button>
+        </div>
+      </div>
+      <p class="dp-feito" id="dp-feito" role="status" aria-live="polite" hidden></p>
+      <div class="tools dp-tools" id="dp-tools">
+        <div class="seg" id="dp-filtro" role="group" aria-label="Mostrar notas"></div>
+        <input type="search" class="search" id="dp-q" placeholder="Buscar loja, item ou categoria" aria-label="Buscar notas">
+        <span class="count" id="dp-count"></span>
+      </div>
+      <ul class="dp-notas" id="dp-notas"></ul>
+    </section>
+  </div>
+
+  <!-- Diálogos (fora da visão, para funcionarem também a partir da tabela de lançamentos) -->
+  <dialog class="dp-dlg" id="dp-dlg-vinc" aria-labelledby="dp-vinc-t">
+    <div class="dp-dlg-in">
+      <header class="dp-dlg-head">
+        <h3 id="dp-vinc-t">Vincular a um lançamento</h3>
+        <button type="button" class="dp-x" data-fechar aria-label="Fechar">×</button>
+      </header>
+      <div class="dp-vinc-nota" id="dp-vinc-nota"></div>
+      <div class="dp-dlg-corpo">
+        <h4 id="dp-vinc-sug-t">Sugestões</h4>
+        <ul class="dp-cands" id="dp-vinc-sug"></ul>
+        <label class="dp-campo">
+          <span>Procurar nos lançamentos</span>
+          <input type="search" class="search" id="dp-vinc-q" placeholder="Loja, valor (ex.: 54,90) ou data (ex.: 12/09)" autocomplete="off">
+        </label>
+        <ul class="dp-cands" id="dp-vinc-res"></ul>
+      </div>
+      <footer class="dp-dlg-pe">
+        <button type="button" class="dp-btn" id="dp-vinc-fora">Não está no cartão</button>
+        <button type="button" class="dp-btn" data-fechar>Cancelar</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="dp-dlg" id="dp-dlg-edit" aria-labelledby="dp-edit-t">
+    <form class="dp-dlg-in" id="dp-edit-form" novalidate>
+      <header class="dp-dlg-head">
+        <h3 id="dp-edit-t">Editar nota</h3>
+        <button type="button" class="dp-x" data-fechar aria-label="Fechar">×</button>
+      </header>
+      <div class="dp-dlg-corpo dp-form">
+        <p class="dp-form-aviso" id="dp-edit-aviso" hidden></p>
+        <label class="dp-campo dp-larga"><span>Loja ou descrição</span><input name="loja" autocomplete="off" maxlength="120"></label>
+        <label class="dp-campo"><span>Data da compra</span><input name="data" type="date"></label>
+        <label class="dp-campo"><span>Hora</span><input name="hora" type="time"></label>
+        <label class="dp-campo"><span>Total (R$)</span><input name="total" inputmode="decimal" autocomplete="off" placeholder="0,00"></label>
+        <label class="dp-campo"><span>Forma de pagamento</span><select name="forma"></select></label>
+        <label class="dp-campo" id="dp-campo-cartao"><span>Final do cartão</span><input name="cartao_final" inputmode="numeric" maxlength="4" placeholder="1234" autocomplete="off"></label>
+        <label class="dp-campo"><span>Categoria</span><input name="categoria" list="dp-cats-lista" autocomplete="off" maxlength="60"></label>
+        <datalist id="dp-cats-lista"></datalist>
+        <label class="dp-campo dp-larga" id="dp-campo-cnpj"><span>CNPJ (opcional)</span><input name="cnpj" autocomplete="off" maxlength="20"></label>
+        <fieldset class="dp-itens dp-larga">
+          <legend>Itens (opcional)</legend>
+          <div class="dp-itens-cab" aria-hidden="true"><span>Descrição</span><span>Qtd.</span><span>Unitário</span><span>Total</span><span></span></div>
+          <div id="dp-itens-lista"></div>
+          <div class="dp-itens-pe">
+            <button type="button" class="dp-btn dp-btn-sm" id="dp-item-add">+ Item</button>
+            <span id="dp-itens-soma"></span>
+          </div>
+        </fieldset>
+        <p class="dp-form-erro" id="dp-edit-erro" role="alert" hidden></p>
+      </div>
+      <footer class="dp-dlg-pe">
+        <button type="submit" class="dp-btn dp-btn-pri" id="dp-edit-ok">Salvar</button>
+        <button type="button" class="dp-btn" data-fechar>Cancelar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="dp-dlg" id="dp-dlg-ver" aria-labelledby="dp-ver-t">
+    <div class="dp-dlg-in">
+      <header class="dp-dlg-head">
+        <h3 id="dp-ver-t">Nota</h3>
+        <button type="button" class="dp-x" data-fechar aria-label="Fechar">×</button>
+      </header>
+      <div class="dp-dlg-corpo" id="dp-ver-corpo"></div>
+      <footer class="dp-dlg-pe" id="dp-ver-pe"></footer>
+    </div>
+  </dialog>
+</div>
+
+</div>
+<script src="vendor/d3.min.js"></script>
+<script src="dados/exemplo.js"></script>
+<script src="app/armazenamento.js"></script>
+<script src="app/motor.js"></script>
+<script src="app/notas.js"></script>
+<script src="app/painel.js"></script>
+<script src="app/despesas-calculo.js"></script>
+<script src="app/despesas.js"></script>
+<script src="app/inicio.js"></script>
+</body>
+</html>

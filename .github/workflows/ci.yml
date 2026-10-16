@@ -1,0 +1,62 @@
+# Validação: roda em todo pull request (é a checagem obrigatória para o merge na main)
+# e é reaproveitada pelo workflow de release. Só dados fictícios: nada de faturas reais aqui.
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  testes:
+    name: testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Nenhum dado pessoal ou documento real no repositório
+        run: npm run privacidade
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tipos (contrato dos plugins)
+        run: npm run tipos
+
+      - name: Testes de lógica (leitores, notas, despesas, versão)
+        run: npm run test:unit
+
+      - name: index.html e exemplo.html estão montados
+        run: |
+          npm run montar
+          git diff --exit-code -- index.html exemplo.html || (echo "::error::Rode 'npm run montar' e faça commit de index.html e exemplo.html" && exit 1)
+
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Testes de tela (computador e celular)
+        run: npm run test:tela
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: relatorio-testes-de-tela
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

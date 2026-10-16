@@ -1,0 +1,138 @@
+<!-- Visão "Despesas": notas fiscais, cupons e gastos fora do cartão. despesas.js move este bloco para dentro do painel (#rx-root). -->
+<div id="rx-despesas-parte" hidden>
+  <div class="rx-visao rx-desp" id="rx-visao-despesas" hidden>
+    <section class="sec" id="dp-resumo">
+      <div class="sec-head">
+        <h2 id="dp-titulo">Despesas</h2>
+        <p id="dp-sub"></p>
+      </div>
+      <div class="dp-dica" id="dp-dica" hidden></div>
+      <div class="card dp-intro" id="dp-intro" hidden></div>
+      <div class="kpis dp-kpis" id="dp-kpis"></div>
+    </section>
+
+    <section class="sec" id="dp-atencao" hidden>
+      <div class="sec-head">
+        <h2>Precisa da sua atenção</h2>
+        <p>Notas que a leitura não entendeu direito ou compras no crédito sem lançamento ligado.</p>
+      </div>
+      <ul class="dp-atencao" id="dp-atencao-lista"></ul>
+    </section>
+
+    <section class="grid2" id="dp-graficos" aria-label="Como e com o que você gastou">
+      <div class="card" id="dp-formas-card">
+        <div class="card-title">
+          <h3>Como vai ser pago</h3>
+          <p id="dp-formas-sub">Cartão de crédito e gastos fora dele.</p>
+        </div>
+        <div class="stackbar dp-stack" id="dp-formas-bar" aria-hidden="true"></div>
+        <ul class="dp-formas" id="dp-formas"></ul>
+      </div>
+      <div class="card" id="dp-cats-card">
+        <div class="card-title">
+          <h3>Por categoria</h3>
+          <p id="dp-cats-sub">Cartão e despesas fora dele, sem contar duas vezes a nota ligada a um lançamento.</p>
+        </div>
+        <div class="hbars dp-hbars" id="dp-cats"></div>
+      </div>
+    </section>
+
+    <section class="sec" id="dp-mensal" hidden>
+      <div class="sec-head">
+        <h2>Mês a mês</h2>
+        <p>Pelo mês em que a compra foi feita, pelo valor total (parceladas também), sem tarifas e juros. “Parcial” = falta a fatura onde estão as compras à vista daquele mês.</p>
+      </div>
+      <div class="card"><div id="dp-mensal-body"></div></div>
+    </section>
+
+    <section class="sec" id="dp-notas-sec">
+      <div class="dp-notas-head">
+        <div class="sec-head">
+          <h2>Notas e cupons</h2>
+          <p id="dp-notas-sub"></p>
+        </div>
+        <div class="dp-acoes">
+          <button type="button" class="dp-btn dp-btn-pri" id="dp-nova">+ Despesa à mão</button>
+          <button type="button" class="dp-btn" id="dp-csv">Baixar CSV das notas</button>
+        </div>
+      </div>
+      <p class="dp-feito" id="dp-feito" role="status" aria-live="polite" hidden></p>
+      <div class="tools dp-tools" id="dp-tools">
+        <div class="seg" id="dp-filtro" role="group" aria-label="Mostrar notas"></div>
+        <input type="search" class="search" id="dp-q" placeholder="Buscar loja, item ou categoria" aria-label="Buscar notas">
+        <span class="count" id="dp-count"></span>
+      </div>
+      <ul class="dp-notas" id="dp-notas"></ul>
+    </section>
+  </div>
+
+  <!-- Diálogos (fora da visão, para funcionarem também a partir da tabela de lançamentos) -->
+  <dialog class="dp-dlg" id="dp-dlg-vinc" aria-labelledby="dp-vinc-t">
+    <div class="dp-dlg-in">
+      <header class="dp-dlg-head">
+        <h3 id="dp-vinc-t">Vincular a um lançamento</h3>
+        <button type="button" class="dp-x" data-fechar aria-label="Fechar">×</button>
+      </header>
+      <div class="dp-vinc-nota" id="dp-vinc-nota"></div>
+      <div class="dp-dlg-corpo">
+        <h4 id="dp-vinc-sug-t">Sugestões</h4>
+        <ul class="dp-cands" id="dp-vinc-sug"></ul>
+        <label class="dp-campo">
+          <span>Procurar nos lançamentos</span>
+          <input type="search" class="search" id="dp-vinc-q" placeholder="Loja, valor (ex.: 54,90) ou data (ex.: 12/09)" autocomplete="off">
+        </label>
+        <ul class="dp-cands" id="dp-vinc-res"></ul>
+      </div>
+      <footer class="dp-dlg-pe">
+        <button type="button" class="dp-btn" id="dp-vinc-fora">Não está no cartão</button>
+        <button type="button" class="dp-btn" data-fechar>Cancelar</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="dp-dlg" id="dp-dlg-edit" aria-labelledby="dp-edit-t">
+    <form class="dp-dlg-in" id="dp-edit-form" novalidate>
+      <header class="dp-dlg-head">
+        <h3 id="dp-edit-t">Editar nota</h3>
+        <button type="button" class="dp-x" data-fechar aria-label="Fechar">×</button>
+      </header>
+      <div class="dp-dlg-corpo dp-form">
+        <p class="dp-form-aviso" id="dp-edit-aviso" hidden></p>
+        <label class="dp-campo dp-larga"><span>Loja ou descrição</span><input name="loja" autocomplete="off" maxlength="120"></label>
+        <label class="dp-campo"><span>Data da compra</span><input name="data" type="date"></label>
+        <label class="dp-campo"><span>Hora</span><input name="hora" type="time"></label>
+        <label class="dp-campo"><span>Total (R$)</span><input name="total" inputmode="decimal" autocomplete="off" placeholder="0,00"></label>
+        <label class="dp-campo"><span>Forma de pagamento</span><select name="forma"></select></label>
+        <label class="dp-campo" id="dp-campo-cartao"><span>Final do cartão</span><input name="cartao_final" inputmode="numeric" maxlength="4" placeholder="1234" autocomplete="off"></label>
+        <label class="dp-campo"><span>Categoria</span><input name="categoria" list="dp-cats-lista" autocomplete="off" maxlength="60"></label>
+        <datalist id="dp-cats-lista"></datalist>
+        <label class="dp-campo dp-larga" id="dp-campo-cnpj"><span>CNPJ (opcional)</span><input name="cnpj" autocomplete="off" maxlength="20"></label>
+        <fieldset class="dp-itens dp-larga">
+          <legend>Itens (opcional)</legend>
+          <div class="dp-itens-cab" aria-hidden="true"><span>Descrição</span><span>Qtd.</span><span>Unitário</span><span>Total</span><span></span></div>
+          <div id="dp-itens-lista"></div>
+          <div class="dp-itens-pe">
+            <button type="button" class="dp-btn dp-btn-sm" id="dp-item-add">+ Item</button>
+            <span id="dp-itens-soma"></span>
+          </div>
+        </fieldset>
+        <p class="dp-form-erro" id="dp-edit-erro" role="alert" hidden></p>
+      </div>
+      <footer class="dp-dlg-pe">
+        <button type="submit" class="dp-btn dp-btn-pri" id="dp-edit-ok">Salvar</button>
+        <button type="button" class="dp-btn" data-fechar>Cancelar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="dp-dlg" id="dp-dlg-ver" aria-labelledby="dp-ver-t">
+    <div class="dp-dlg-in">
+      <header class="dp-dlg-head">
+        <h3 id="dp-ver-t">Nota</h3>
+        <button type="button" class="dp-x" data-fechar aria-label="Fechar">×</button>
+      </header>
+      <div class="dp-dlg-corpo" id="dp-ver-corpo"></div>
+      <footer class="dp-dlg-pe" id="dp-ver-pe"></footer>
+    </div>
+  </dialog>
+</div>

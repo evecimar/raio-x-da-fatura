@@ -1,0 +1,65 @@
+<main class="rx-inicio" id="rx-inicio" hidden>
+  <div class="rx-marca"><span class="rx-logo" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/><path d="M8 8.5l5 4M13 8.5l-5 4"/></svg></span><b>Raio-X da Fatura</b></div>
+  <h1>Entenda suas faturas de cartão <em>em segundos</em>.</h1>
+  <p class="rx-lede">Escolha a pasta onde você guarda as faturas e as notas fiscais. O Raio-X da Fatura lê tudo, de todos os meses, e mostra quanto pagar, o que pagar primeiro, onde cortar e todas as suas despesas, até as pagas em dinheiro ou Pix.</p>
+
+  <section class="rx-zona" id="rx-zona" aria-label="Escolher faturas">
+    <div class="rx-ico" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v6M9 14l3-3 3 3"/></svg></div>
+    <h2>Arraste a pasta com as faturas para cá</h2>
+    <p>ou escolha pelo botão. Lemos PDFs das faturas e, se quiser, as notas fiscais: foto do cupom, PDF ou XML.</p>
+    <div class="rx-botoes">
+      <button type="button" class="rx-btn" id="rx-btn-pasta">Escolher pasta</button>
+      <button type="button" class="rx-btn sec" id="rx-btn-arquivos">Escolher arquivos</button>
+    </div>
+    <input type="file" id="rx-pasta" webkitdirectory directory multiple hidden>
+    <input type="file" id="rx-arquivos-input" accept="application/pdf,.pdf,.xml,text/xml,image/*" multiple hidden>
+    <div class="rx-bancos" id="rx-bancos" aria-label="Bancos suportados"></div>
+    <div class="rx-links">
+      <a href="exemplo.html">Ver um exemplo</a>
+      <button type="button" id="rx-restaurar-inicio">Restaurar um backup</button>
+      <button type="button" id="rx-voltar-painel" hidden>Voltar ao painel</button>
+    </div>
+  </section>
+
+  <section class="rx-progresso" id="rx-progresso" hidden aria-live="polite">
+    <ul id="rx-arquivos"></ul>
+    <div class="rx-resumo" id="rx-resumo" hidden>
+      <span id="rx-resumo-texto"></span>
+      <button type="button" class="rx-btn" id="rx-abrir-painel">Ver painel</button>
+    </div>
+  </section>
+
+  <section class="rx-privacidade" aria-label="Privacidade">
+    <div><b>Nada sai do seu computador</b>Os PDFs são lidos aqui mesmo, no navegador. Sem servidor, sem conta, sem internet.</div>
+    <div><b>Faturas e notas juntas</b>Faturas de vários meses e notas fiscais na mesma pasta. As notas pagas no cartão são ligadas à compra da fatura.</div>
+    <div><b>Fica guardado neste navegador</b>Ao voltar, o painel abre direto. Os PDFs e fotos originais também ficam guardados aqui, para você abrir depois (dá para desligar). Em “Dados e backup” você baixa um backup ou apaga tudo.</div>
+  </section>
+</main>
+
+<dialog class="rx-dialog" id="rx-senha">
+  <form id="rx-senha-form">
+    <h3>Este PDF tem senha</h3>
+    <p><span id="rx-senha-arquivo"></span> está protegido. Muitos bancos usam os primeiros dígitos do CPF.</p>
+    <p class="rx-erro" id="rx-senha-erro" hidden>Senha incorreta. Tente de novo.</p>
+    <input type="password" id="rx-senha-campo" autocomplete="off" aria-label="Senha do PDF">
+    <menu><button type="button" class="rx-btn sec" id="rx-senha-pular">Pular</button><button type="submit" class="rx-btn">Abrir</button></menu>
+  </form>
+</dialog>
+
+<input type="file" id="rx-backup-input" accept="application/json,.json" hidden>
+<dialog class="rx-dialog rx-dados" id="rx-dados" aria-labelledby="rx-dados-t">
+  <h3 id="rx-dados-t">Dados e backup</h3>
+  <p><b>Onde estão:</b> <span id="rx-dados-onde"></span></p>
+  <p><span id="rx-dados-conteudo"></span><br><span id="rx-dados-espaco" class="rx-fraco"></span></p>
+  <label class="rx-check"><input type="checkbox" id="rx-dados-originais"> Guardar os arquivos originais (PDFs e fotos) para abrir depois</label>
+  <hr>
+  <h4>Backup</h4>
+  <p class="rx-fraco">Um arquivo .json com tudo: faturas, lançamentos, notas, o que você marcou como pago e os vínculos. Use para trocar de computador ou navegador.</p>
+  <label class="rx-check"><input type="checkbox" id="rx-dados-backup-orig" checked> Incluir os arquivos originais (fica maior e leva os documentos completos, com seus dados pessoais: guarde o backup em lugar seguro)</label>
+  <div class="rx-linha-botoes"><button type="button" class="rx-btn" id="rx-dados-backup">Baixar backup</button><button type="button" class="rx-btn sec" id="rx-dados-restaurar">Restaurar backup</button></div>
+  <h4>Planilhas</h4>
+  <div class="rx-linha-botoes"><button type="button" class="rx-btn sec" id="rx-dados-csv">CSV dos lançamentos</button><button type="button" class="rx-btn sec" id="rx-dados-csv-notas">CSV das notas</button></div>
+  <p class="rx-msg" id="rx-dados-msg" aria-live="polite"></p>
+  <hr>
+  <menu><button type="button" class="rx-btn-perigo" id="rx-dados-limpar">Apagar tudo deste navegador</button><button type="button" class="rx-btn" id="rx-dados-fechar">Fechar</button></menu>
+</dialog>

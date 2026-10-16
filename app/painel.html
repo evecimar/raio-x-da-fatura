@@ -1,0 +1,141 @@
+<div class="rx" id="rx-root">
+  <header class="top" id="topo">
+    <div class="top-row">
+      <div class="top-tit">
+        <h1>Raio-X da Fatura</h1>
+        <p class="top-mes" id="rx-mes">&nbsp;</p>
+      </div>
+      <div class="rx-controles" id="rx-controles"></div>
+    </div>
+    <div class="rx-visoes" id="rx-visoes"></div>
+    <p class="lede" id="takeaway"><span class="dash-skeleton">—</span></p>
+  </header>
+
+  <div class="rx-visao" id="rx-visao-faturas">
+  <section class="sec" id="analise">
+    <div class="sec-head">
+      <h2>O que as faturas mostram</h2>
+      <p id="an-sub">Onde o dinheiro foi e o que merece atenção.</p>
+    </div>
+    <div class="an-lead" id="an-lead" hidden>
+      <div class="ic" aria-hidden="true">!</div>
+      <p id="an-lead-txt"></p>
+    </div>
+    <div class="an-grid" id="an-grid"></div>
+  </section>
+
+  <section class="sec" id="faturas">
+    <div class="sec-head">
+      <h2>Cada fatura</h2>
+      <p>Ordenadas pelo vencimento. A barra mostra quanto do limite de cada cartão já está tomado.</p>
+    </div>
+    <div class="grid3" id="bank-cards"></div>
+  </section>
+
+  <section class="now" id="agora" aria-labelledby="agora-t">
+    <div class="now-plan">
+      <header>
+        <h2 id="agora-t">O que pagar primeiro</h2>
+        <p id="plan-sub">Pela ordem: as vencidas, começando pelos juros mais altos, depois a que vence antes.</p>
+      </header>
+      <ol class="steps" id="plan"></ol>
+    </div>
+    <div class="now-total">
+      <div class="lab" id="total-lab">Total das faturas do mês</div>
+      <div class="hero-num" id="total-num">—</div>
+      <div class="stackbar" id="mix" aria-label="Composição do total por banco"></div>
+      <ul class="keys" id="mix-keys"></ul>
+    </div>
+  </section>
+
+  <section class="kpis" id="numeros" aria-label="Números-chave"></section>
+
+  <section class="sec" id="atencao">
+    <div class="sec-head">
+      <h2>Onde cortar</h2>
+      <p>Os gastos que mais pesam e as cobranças que valem uma conferida.</p>
+    </div>
+    <ul class="cuts" id="alerts"></ul>
+  </section>
+
+  <section class="sec" id="evolucao" hidden>
+    <div class="sec-head">
+      <h2>Evolução mês a mês</h2>
+      <p id="evo-sub">Total das faturas de cada mês, empilhado por banco. O mês selecionado aparece em destaque.</p>
+    </div>
+    <div class="evo-grid">
+      <div class="card" id="evo-card">
+        <div class="legend" id="evo-legend"></div>
+        <div class="chartbox evo-box" id="evo-chart"><div class="tip" id="evo-tip"></div></div>
+        <ul class="evo-resumo" id="evo-resumo" aria-label="Total de cada mês"></ul>
+      </div>
+      <div class="card" id="evo-var">
+        <div class="card-title">
+          <h3>O que mudou por categoria</h3>
+          <p id="evo-var-sub">Compras do mês selecionado contra o mês anterior, sem estornos.</p>
+        </div>
+        <div id="evo-var-body"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid2" aria-label="Análises">
+    <div class="card" id="categorias">
+      <div class="card-title">
+        <h3>Gastos por categoria</h3>
+        <p id="cat-sub">Compras do mês, sem estornos.</p>
+      </div>
+      <div class="hbars" id="cat-bars"></div>
+    </div>
+    <div class="card" id="quem">
+      <div class="card-title">
+        <h3>Quem gastou</h3>
+        <p>Compras por portador e cartão, sem estornos. A cor é a do banco.</p>
+      </div>
+      <div class="hbars" id="port-bars"></div>
+    </div>
+  </section>
+
+  <section class="card" id="dia-a-dia">
+    <div class="card-title">
+      <h3>Compras à vista dia a dia</h3>
+      <p id="dia-sub">Somente compras sem parcela, empilhadas por banco. O dia mais alto leva o valor em cima.</p>
+    </div>
+    <div class="legend" id="dia-legend"></div>
+    <div class="chartbox" id="dia-chart"><div class="tip" id="dia-tip"></div></div>
+  </section>
+
+  <section class="card" id="lancamentos">
+    <div class="card-title">
+      <h3>Todos os lançamentos</h3>
+      <p>Em verde, estornos e créditos. Toque no cabeçalho para ordenar.</p>
+    </div>
+    <div class="tools">
+      <input type="search" class="search" id="q" placeholder="Buscar descrição, loja, categoria ou portador" aria-label="Buscar">
+      <div class="seg" id="f-banco" role="group" aria-label="Banco"></div>
+      <select class="select" id="f-cat" aria-label="Categoria"><option value="">Todas as categorias</option></select>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="tablebox">
+      <table id="tx">
+        <thead><tr>
+          <th data-field="data"><button type="button" data-k="data">Data</button></th>
+          <th data-field="mes" class="hide-sm col-mes"><button type="button" data-k="mes">Fatura</button></th>
+          <th data-field="banco" class="hide-sm"><button type="button" data-k="banco">Banco</button></th>
+          <th data-field="cartao" class="hide-md"><button type="button" data-k="cartao">Cartão</button></th>
+          <th data-field="portador" class="hide-sm"><button type="button" data-k="portador">Portador</button></th>
+          <th data-field="descricao"><button type="button" data-k="descricao">Descrição</button></th>
+          <th data-field="estabelecimento" class="hide-md col-estab"><button type="button" data-k="estabelecimento">Estabelecimento</button></th>
+          <th data-field="categoria" class="hide-sm"><button type="button" data-k="categoria">Categoria</button></th>
+          <th data-field="parcela" class="hide-sm"><button type="button" data-k="parcela">Parcela</button></th>
+          <th data-field="valor" class="r"><button type="button" data-k="valor">Valor</button></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  </div>
+
+  <footer class="rx-footer"><span>Raio-X da Fatura · painel open source de faturas de cartão</span><span>Seus dados ficam só no seu computador.</span></footer>
+</div>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- NFC-e FICTÍCIA para testes do Raio-X da Fatura. Empresa, CNPJ e valores inventados. -->
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe><infNFe Id="NFe00000000000000000000000000000000000000000000" versao="4.00">
+    <ide><cUF>35</cUF><mod>65</mod><serie>1</serie><nNF>1234</nNF><dhEmi>2026-09-18T19:42:10-03:00</dhEmi></ide>
+    <emit><CNPJ>11222333000181</CNPJ><xNome>SUPERMERCADO BOM PRECO LTDA</xNome><xFant>SUPERMERCADO BOM PRECO</xFant></emit>
+    <det nItem="1"><prod><cProd>1</cProd><xProd>ARROZ TIPO 1 5KG</xProd><qCom>1.0000</qCom><vUnCom>27.90</vUnCom><vProd>27.90</vProd></prod></det>
+    <det nItem="2"><prod><cProd>2</cProd><xProd>FEIJAO CARIOCA 1KG</xProd><qCom>2.0000</qCom><vUnCom>8.49</vUnCom><vProd>16.98</vProd></prod></det>
+    <det nItem="3"><prod><cProd>3</cProd><xProd>CAFE TORRADO 500G</xProd><qCom>1.0000</qCom><vUnCom>19.90</vUnCom><vProd>19.90</vProd></prod></det>
+    <total><ICMSTot><vProd>64.78</vProd><vNF>64.78</vNF></ICMSTot></total>
+    <pag><detPag><tPag>03</tPag><vPag>64.78</vPag><card><tBand>02</tBand></card></detPag></pag>
+  </infNFe></NFe>
+</nfeProc>

@@ -34,5 +34,9 @@ if (process.argv.includes('--site')) {
 }
 fs.writeFileSync(path.join(destino, 'LEIA-ME.txt'),
   `Raio-X da Fatura ${versao}\n\nAbra o arquivo index.html com um duplo clique (Chrome, Edge ou Firefox).\n` +
-  `Quer ver antes? Abra exemplo.html (dados inventados).\nTudo funciona sem internet: nada sai do seu computador.\n`);
+  `Quer ver antes? Abra exemplo.html (dados inventados).\nTudo funciona sem internet: nada sai do seu computador.\n\n` +
+  `Windows avisou "Deseja abrir este arquivo? Fornecedor desconhecido"?\n` +
+  `É o aviso normal para arquivos baixados da internet; o app não instala nada. Clique em Abrir.\n` +
+  `Para não ver mais o aviso: apague esta pasta, clique com o botão direito no .zip > Propriedades >\n` +
+  `marque "Desbloquear" > OK, e descompacte de novo.\n`);
 console.log(path.relative(raiz, destino));

@@ -34,8 +34,9 @@ Seu banco não está na lista? Cada banco é um plugin pequeno em JavaScript (co
 
 **Ou baixe e use offline:**
 
-1. Baixe o `.zip` da [última release](https://github.com/evecimar/raio-x-da-fatura/releases/latest) e descompacte.
-2. Abra o arquivo `index.html` no navegador (Chrome, Edge ou Firefox), com um duplo clique.
+1. Baixe o `.zip` da [última release](https://github.com/evecimar/raio-x-da-fatura/releases/latest).
+2. **No Windows**, antes de descompactar: clique com o botão direito no `.zip`, vá em **Propriedades**, marque **Desbloquear** e clique em **OK**. Sem isso, o Windows mostra o aviso "Deseja abrir este arquivo? Fornecedor desconhecido" toda vez. O aviso é normal para qualquer arquivo baixado da internet, e o app não instala nada. Se já descompactou, dá para clicar em **Abrir** ou desmarcar "Sempre perguntar antes de abrir este arquivo".
+3. Descompacte e abra o arquivo `index.html` no navegador (Chrome, Edge ou Firefox), com um duplo clique.
 
 Nos dois casos:
 

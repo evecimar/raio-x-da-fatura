@@ -145,7 +145,12 @@ for mi, mes in enumerate(MESES):
         notas.append(dict(arquivo=f'nota-exemplo-{mes}-{k + 1}.jpg' if k != 4 else '', origem='foto' if k != 4 else 'manual', loja=loja, cnpj=cnpj,
                           data=d.isoformat(), hora=f'{8 + k}:{(k * 7) % 60:02d}', total=round(sum(i['total'] for i in its), 2), forma=forma,
                           cartao_final='', categoria=cat, itens=its, vinculo='', vinculo_tipo='', revisar=False, avisos=[]))
-    # 3) uma nota que a leitura não conseguiu entender direito
+    # 3) despesa digitada no crédito, parcelada, que ainda não apareceu em nenhuma fatura (vai para "Próximos meses")
+    if mes == MESES[-1]:
+        notas.append(dict(arquivo='', origem='manual', loja='Móveis Exemplo', cnpj='', data=f'{mes}-18', hora='', total=1290.00, forma='credito',
+                          parcelas=10, cartao_final='4821', categoria='Casa', itens=[dict(descricao='Sofá 3 lugares', qtd=1, unitario=1290.00, total=1290.00)],
+                          vinculo='', vinculo_tipo='', revisar=False, avisos=[]))
+    # 4) uma nota que a leitura não conseguiu entender direito
     notas.append(dict(arquivo=f'foto-borrada-{mes}.jpg', origem='foto', loja='Mercadinho S...', cnpj='', data=dia(compras_de, 26).isoformat(), hora='',
                       total=None, forma='', cartao_final='', categoria='Mercado', itens=[], vinculo='', vinculo_tipo='', revisar=True,
                       avisos=['Não consegui ler o total.']))

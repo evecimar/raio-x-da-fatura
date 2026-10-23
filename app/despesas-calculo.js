@@ -38,6 +38,47 @@
 
   RX.despesasUtil = { N, temValor, r2, soma, isoOk, mesOk, parcelaDe, mesAnterior, addMeses, addMesesMes, valorCompra, ehTarifa };
 
+  /** Em quantas vezes a despesa foi parcelada: só vale no crédito, de 1 a 48 (o resto vira 1, à vista). */
+  RX.parcelasDaNota = function (n) {
+    if (!n || n.forma !== 'credito') return 1;
+    const p = String(n.parcelas == null ? '' : n.parcelas).trim();
+    return /^\d{1,2}$/.test(p) && +p >= 1 && +p <= 48 ? +p : 1;
+  };
+  /** Divide o total em N parcelas que somam exatamente o total; o centavo que sobra vai na 1ª (como fazem os bancos). */
+  RX.valoresDasParcelas = function (total, de) {
+    const cent = Math.round(N(total) * 100), k = Math.max(1, de | 0), base = Math.floor(cent / k);
+    return Array.from({ length: k }, (_, i) => (i === 0 ? cent - base * (k - 1) : base) / 100);
+  };
+
+  /** Banco do cartão de final `fim`, pelo que aparece nos lançamentos (o mais frequente). */
+  function bancoDoCartao(fim, lancamentos) {
+    if (!/^\d{4}$/.test(String(fim || ''))) return '';
+    const c = new Map();
+    lancamentos.forEach(l => { if (l.cartao === fim && l.banco) c.set(l.banco, (c.get(l.banco) || 0) + 1); });
+    const top = [...c].sort((a, b) => b[1] - a[1])[0];
+    return top ? top[0] : '';
+  }
+  /**
+   * Fatura (mês do vencimento, 'AAAA-MM') em que cai a 1ª parcela de uma compra no crédito feita em `data`.
+   * Com o banco conhecido: a primeira fatura que fecha no dia da compra ou depois (fechamentos que não estão
+   * carregados seguem o dia de fechamento da fatura carregada mais recente). Sem banco conhecido: a fatura do mês seguinte
+   * (estimado: true, porque não se sabe o dia em que o cartão fecha).
+   * @returns {{mes: string, banco: string, estimado: boolean}}
+   */
+  RX.faturaDaCompra = function (data, fim, { faturas = [], lancamentos = [] } = {}) {
+    if (!isoOk(data)) return { mes: '', banco: '', estimado: true };
+    const banco = bancoDoCartao(fim, lancamentos);
+    const doBanco = faturas.filter(f => f.banco === banco && mesOk(f.mes) && isoOk(f.fechamento)).sort((a, b) => a.mes < b.mes ? -1 : 1);
+    if (!banco || !doBanco.length) return { mes: addMesesMes(data.slice(0, 7), 1), banco, estimado: true };
+    const ult = doBanco[doBanco.length - 1];
+    const carregado = new Map(doBanco.map(f => [f.mes, f.fechamento]));
+    for (let k = -60; k <= 60; k++) {
+      const m = addMesesMes(ult.mes, k), fe = carregado.get(m) || addMeses(ult.fechamento, k);
+      if (fe >= data) return { mes: m, banco, estimado: false };
+    }
+    return { mes: addMesesMes(data.slice(0, 7), 1), banco, estimado: true };
+  };
+
   /** Fechamento de cada fatura (banco|mes → ISO). Sem fechamento, estima 9 dias antes do vencimento. */
   function mapaFechamentos(faturas) {
     const m = new Map();
@@ -188,6 +229,17 @@
         else { outras = r2(outras + c.parcela); if (mesK > ultimoMesParcela) ultimoMesParcela = mesK; }
       }
     });
+    // Nota no crédito ainda sem fatura: a 1ª parcela vai para a próxima fatura; as outras, para as seguintes.
+    let pendentes = 0;
+    C.pendentes.forEach(n => {
+      const vals = RX.valoresDasParcelas(N(n.total), RX.parcelasDaNota(n));
+      pendentes = r2(pendentes + vals[0]);
+      if (vals.length < 2) return;
+      outras = r2(outras + soma(vals.slice(1), v => v));
+      const f = RX.faturaDaCompra(n.data, n.cartao_final, { faturas: C.faturas, lancamentos: C.HL });
+      const ultimo = f.mes ? addMesesMes(f.mes, vals.length - 1) : '';
+      if (ultimo > ultimoMesParcela) ultimoMesParcela = ultimo;
+    });
     const faturas = [...porFatura].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([k, valor]) => {
       const [banco, mes] = k.split('|');
       return { banco, mes, valor, fatura: C.faturas.find(x => x.banco === banco && x.mes === mes) };
@@ -196,7 +248,51 @@
       const ns = C.fora.filter(n => (n.forma || '') === forma && temValor(n.total));
       return { forma, valor: r2(soma(ns, n => N(n.total))), quantidade: ns.length };
     }).filter(x => x.valor > 0);
-    return { faturas, outras, ultimoMesParcela, pendentes: C.totPend, estornos: C.totEstornos, fora };
+    return { faturas, outras, ultimoMesParcela, pendentes, estornos: C.totEstornos, fora };
+  };
+
+  /**
+   * "Próximos meses": o que esperar pagar no cartão, do mês de `hoje` em diante, por fatura (mês do vencimento).
+   * - faturas carregadas que ainda não foram pagas, pelo total;
+   * - parcelas de compras do cartão que continuam depois da última fatura carregada daquele banco;
+   * - despesas digitadas (ou notas) no crédito ainda sem lançamento ligado, divididas em parcelas.
+   * Nota ligada a um lançamento ou marcada como "não está no cartão" não entra (já está, ou não vai estar, numa fatura).
+   * @param {{faturas?: any[], lancamentos?: any[], notas?: any[], hoje?: string}} entrada
+   * @returns {{meses: {mes: string, total: number, itens: {tipo: 'fatura'|'parcela'|'nota', descricao: string, banco: string,
+   *   parcela: string, valor: number, estimado: boolean, id: string}[]}[], total: number}}
+   */
+  RX.proximosMeses = function ({ faturas = [], lancamentos = [], notas = [], hoje = '' } = {}) {
+    const diaHoje = isoOk(hoje) ? hoje : new Date().toISOString().slice(0, 10), mesHoje = diaHoje.slice(0, 7);
+    const C = RX.calcularDespesas({ faturas, lancamentos, notas, mes: '*', hoje: diaHoje });
+    const itens = [];
+    const add = (mes, item) => { if (mesOk(mes) && mes >= mesHoje && item.valor > 0) itens.push({ mes, ...item }); };
+    faturas.forEach(f => {
+      if (f.paga === 'sim' || !temValor(f.total)) return;
+      add(f.mes, { tipo: 'fatura', descricao: 'Fatura ' + f.banco, banco: f.banco, parcela: '', valor: r2(N(f.total)), estimado: false, id: f.banco + '|' + f.mes });
+    });
+    const ultimoMes = new Map();
+    faturas.forEach(f => { if (mesOk(f.mes) && !(String(ultimoMes.get(f.banco) || '') >= f.mes)) ultimoMes.set(f.banco, f.mes); });
+    C.todasCompras.forEach(c => {
+      if (!c.parcelado || !mesOk(c.l.mes)) return;
+      const fim = ultimoMes.get(c.l.banco) || c.l.mes;
+      for (let k = c.n + 1; k <= c.de; k++) {
+        const m = addMesesMes(c.l.mes, k - c.n);
+        if (m <= fim) continue; // fatura carregada: se a parcela não está nela, não há o que prever
+        add(m, { tipo: 'parcela', descricao: c.l.estabelecimento || c.l.descricao || 'Compra parcelada', banco: c.l.banco, parcela: `${k}/${c.de}`, valor: r2(c.parcela), estimado: false, id: c.l.id });
+      }
+    });
+    C.notas.filter(n => !C.vinc(n) && n.forma === 'credito' && n.vinculo_tipo !== 'manual' && temValor(n.total)).forEach(n => {
+      const de = RX.parcelasDaNota(n), vals = RX.valoresDasParcelas(N(n.total), de);
+      const f = RX.faturaDaCompra(n.data, n.cartao_final, { faturas, lancamentos });
+      if (!f.mes) return;
+      vals.forEach((v, i) => add(addMesesMes(f.mes, i), { tipo: 'nota', descricao: String(n.loja || '').trim() || 'Despesa no crédito', banco: f.banco, parcela: de > 1 ? `${i + 1}/${de}` : '', valor: v, estimado: f.estimado, id: n.id }));
+    });
+    const ordem = { fatura: 0, parcela: 1, nota: 2 };
+    const meses = [...new Set(itens.map(i => i.mes))].sort().map(mes => {
+      const doMes = itens.filter(i => i.mes === mes).sort((a, b) => ordem[a.tipo] - ordem[b.tipo] || b.valor - a.valor).map(({ mes: _, ...i }) => i);
+      return { mes, total: r2(soma(doMes, i => i.valor)), itens: doMes };
+    });
+    return { meses, total: r2(soma(meses, m => m.total)) };
   };
 
   /** Gastos por categoria (cartão + fora dele + pendentes), do maior para o menor. */

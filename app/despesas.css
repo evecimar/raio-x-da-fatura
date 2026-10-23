@@ -211,3 +211,34 @@
 
 .rx .dp-f-estorno { background: var(--color-ok); }
 .rx .dp-parcial { color: var(--color-warn); margin-top: 6px; }
+
+/* Parcelas de uma despesa no crédito */
+.rx .dp-parc { color: var(--rx-vi-text); background: color-mix(in srgb, var(--dp-credito) 12%, transparent); }
+.rx .dp-parc-info { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); padding: var(--cds-pad-sm) var(--cds-pad-md); border-radius: var(--cds-radius);
+  background: color-mix(in srgb, var(--rx-vi) 6%, var(--color-panel)); border: 1px dashed color-mix(in srgb, var(--rx-vi) 35%, var(--rx-ag-line)); }
+.rx .dp-parc-info b { color: var(--rx-vi-text); }
+
+/* Próximos meses: um mês por linha; tocar abre o que cai nele */
+.rx .dp-prox { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.rx .dp-prox-mes { border-bottom: 1px solid color-mix(in srgb, var(--rx-ag-line) 60%, transparent); }
+.rx .dp-prox-mes:last-child { border-bottom: 0; }
+.rx .dp-prox-sum { list-style: none; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px var(--cds-gap-md); align-items: baseline;
+  padding: var(--cds-pad-md) var(--cds-pad-xs); border-radius: var(--cds-radius); }
+.rx .dp-prox-sum::-webkit-details-marker { display: none; }
+.rx .dp-prox-sum:hover { background: color-mix(in srgb, var(--rx-vi) 5%, transparent); }
+.rx .dp-prox-sum:focus-visible { outline: 2px solid var(--rx-vi); outline-offset: 2px; }
+.rx .dp-prox-sum .nm { font-weight: var(--cds-font-weight-medium); }
+.rx .dp-prox-sum .nm::before { content: "▸"; display: inline-block; width: 1.1em; color: var(--rx-vi-text); transition: transform var(--cds-dur-fast, .15s) ease; }
+.rx details[open] > .dp-prox-sum .nm::before { transform: rotate(90deg); }
+.rx .dp-prox-sum .money { font-family: var(--font-serif); font-size: var(--cds-font-size-heading); color: var(--rx-vi-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rx .dp-prox-sum .qt { grid-column: 1 / -1; padding-left: 1.1em; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.rx .dp-prox-track { grid-column: 1 / -1; margin-left: 1.1em; height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--rx-ag-2) 65%, transparent); overflow: hidden; }
+.rx .dp-prox-track > i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--rx-vi) 0%, var(--rx-vi-2, var(--rx-vi)) 100%); }
+.rx .dp-prox-itens { list-style: none; margin: 0 0 var(--cds-pad-md); padding: 0 0 0 1.1em; display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+.rx .dp-prox-itens li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 var(--cds-gap-md); padding: var(--cds-pad-sm) var(--cds-pad-md); border-radius: var(--cds-radius);
+  background: color-mix(in srgb, var(--rx-ag-2) 40%, transparent); font-size: var(--cds-font-size-caption); }
+.rx .dp-prox-itens .nm { overflow-wrap: anywhere; font-weight: var(--cds-font-weight-medium); color: var(--color-fg); }
+.rx .dp-prox-itens .money { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.rx .dp-prox-itens .qt { grid-column: 1 / -1; color: var(--color-fg-muted); }
+.rx .dp-prox-itens .dp-pi-fatura { box-shadow: inset 3px 0 0 var(--rx-vi); }
+.rx .dp-prox-pe { margin-top: var(--cds-gap-sm); color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }

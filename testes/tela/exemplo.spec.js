@@ -88,6 +88,33 @@ test.describe('exemplo', () => {
     await telaSaudavel(page, 'depois das ações');
   });
 
+  test('despesa no crédito em 10x: parcelas aparecem em "Próximos meses"', async ({ page }) => {
+    await visao(page, 'despesas');
+    const hojeISO = await page.evaluate(() => new Date().toLocaleDateString('sv-SE'));
+    await page.click('#dp-nova');
+    // parcelas só aparecem no crédito
+    await expect(page.locator('#dp-campo-parcelas')).toBeHidden();
+    await page.fill('#dp-dlg-edit [name=loja]', 'Geladeira Teste');
+    await page.fill('#dp-dlg-edit [name=data]', hojeISO);
+    await page.fill('#dp-dlg-edit [name=total]', '2.000,00');
+    await page.selectOption('#dp-dlg-edit [name=forma]', 'credito');
+    await expect(page.locator('#dp-campo-parcelas')).toBeVisible();
+    await page.selectOption('#dp-dlg-edit [name=parcelas]', '10');
+    await expect(page.locator('#dp-parc-info')).toContainText('10x de R$ 200,00');
+    await telaSaudavel(page, 'formulário com parcelas');
+    await page.click('#dp-edit-ok');
+    await expect(page.locator('#dp-dlg-edit')).toBeHidden();
+    await expect(page.locator('#dp-feito')).toContainText('10 parcelas');
+    const prox = page.locator('#dp-prox');
+    await expect(prox).toBeVisible();
+    await expect(prox.locator('li.dp-pi-nota', { hasText: 'Geladeira Teste' })).toHaveCount(10);
+    await expect(prox.locator('li.dp-pi-nota', { hasText: 'Geladeira Teste' }).last()).toContainText('10/10');
+    // o mês da compra continua contando o valor total
+    await page.selectOption('#rx-controles select', '*');
+    await expect(page.locator('#dp-notas li.dp-nota', { hasText: 'Geladeira Teste' })).toContainText('10x de R$ 200,00');
+    await telaSaudavel(page, 'próximos meses');
+  });
+
   test('dica "compras do mês anterior" leva ao mês da compra', async ({ page }) => {
     const meses = await page.$$eval('#rx-controles option', o => o.map(x => x.value).filter(v => v !== '*'));
     await page.selectOption('#rx-controles select', meses[meses.length - 2]);

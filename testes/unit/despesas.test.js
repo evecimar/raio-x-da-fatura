@@ -123,6 +123,96 @@ describe('todos os meses', () => {
   });
 });
 
+describe('despesa no crédito parcelada (digitada à mão)', () => {
+  const U = RX;
+  it('número de parcelas: só no crédito, de 1 a 48', () => {
+    expect(U.parcelasDaNota({ forma: 'credito', parcelas: 10 })).toBe(10);
+    expect(U.parcelasDaNota({ forma: 'credito', parcelas: '6' })).toBe(6);
+    expect(U.parcelasDaNota({ forma: 'credito' })).toBe(1);
+    expect(U.parcelasDaNota({ forma: 'pix', parcelas: 10 })).toBe(1);
+    expect(U.parcelasDaNota({ forma: 'credito', parcelas: 0 })).toBe(1);
+    expect(U.parcelasDaNota({ forma: 'credito', parcelas: 99 })).toBe(1);
+    expect(U.parcelasDaNota({ forma: 'credito', parcelas: '2x; alert(1)' })).toBe(1);
+  });
+  it('divide o total em parcelas que somam o total (o centavo que sobra vai na 1ª)', () => {
+    expect(simples(U.valoresDasParcelas(1000, 3))).toEqual([333.34, 333.33, 333.33]);
+    expect(simples(U.valoresDasParcelas(1290, 10))).toEqual(Array(10).fill(129));
+    expect(simples(U.valoresDasParcelas(50, 1))).toEqual([50]);
+  });
+  it('conta pelo total no mês da compra (a regra de Despesas não muda)', () => {
+    const movel = nota({ loja: 'Móveis Exemplo', data: '2026-10-20', total: 1290, parcelas: 10, cartao_final: '1111' });
+    const C = RX.calcularDespesas({ faturas, lancamentos, notas: [movel], mes: '2026-10', hoje: HOJE });
+    expect(C.totPend).toBe(1290);
+    expect(C.total).toBe(1290);
+  });
+  it('"Como vai ser pago": 1ª parcela na próxima fatura, o resto em outras faturas', () => {
+    const movel = nota({ loja: 'Móveis Exemplo', data: '2026-10-20', total: 1290, parcelas: 10, cartao_final: '1111' });
+    const P = simples(RX.comoVaiSerPago(RX.calcularDespesas({ faturas, lancamentos, notas: [movel], mes: '2026-10', hoje: HOJE })));
+    expect(P.pendentes).toBe(129);
+    expect(P.outras).toBe(1161);
+    expect(P.ultimoMesParcela).toBe('2027-08'); // Caixa fecha dia 1: compra de 20/10 cai na fatura de novembro
+  });
+});
+
+describe('próximos meses (o que esperar pagar)', () => {
+  // Caixa (final 1111) fecha dia 1: setembro paga, outubro e novembro carregadas e em aberto. Nubank: outubro já paga.
+  const fP = [
+    { banco: 'Caixa', mes: '2026-09', fechamento: '2026-09-01', vencimento: '2026-09-11', paga: 'sim', total: 900 },
+    { banco: 'Caixa', mes: '2026-10', fechamento: '2026-10-01', vencimento: '2026-10-11', paga: '', total: 1500 },
+    { banco: 'Caixa', mes: '2026-11', fechamento: '2026-11-01', vencimento: '2026-11-11', paga: '', total: 300 },
+    { banco: 'Nubank', mes: '2026-10', fechamento: '2026-10-08', vencimento: '2026-10-15', paga: 'sim', total: 800 }
+  ];
+  const lP = [
+    L({ id: 'tinta6', mes: '2026-10', data: '2026-04-28', valor: 120, parcela: '6/10', descricao: 'LOJA DE TINTAS' }),
+    L({ id: 'tinta7', mes: '2026-11', data: '2026-04-28', valor: 120, parcela: '7/10', descricao: 'LOJA DE TINTAS' }),
+    L({ banco: 'Nubank', cartao: '2222', mes: '2026-10', data: '2026-10-02', valor: 50, parcela: '3/3', descricao: 'CURSO' }), // acabou
+    L({ id: 'avista', mes: '2026-10', data: '2026-09-15', valor: 80 })
+  ];
+  const nP = [
+    nota({ loja: 'Móveis Exemplo', data: '2026-10-20', total: 1290, parcelas: 10, cartao_final: '1111' }),
+    nota({ loja: 'TV Exemplo', data: '2026-10-05', total: 1000, parcelas: 3 }),                       // cartão desconhecido
+    nota({ loja: 'Ligada', data: '2026-09-15', total: 400, parcelas: 5, vinculo: 'avista', vinculo_tipo: 'manual' }),
+    nota({ loja: 'Não está no cartão', data: '2026-10-10', total: 600, parcelas: 6, vinculo_tipo: 'manual' }),
+    nota({ loja: 'Pix', data: '2026-10-10', total: 70, forma: 'pix' }),
+    nota({ loja: 'Antiga', data: '2026-03-10', total: 400, parcelas: 4, cartao_final: '1111' })      // já acabou de pagar
+  ];
+  const R = simples(RX.proximosMeses({ faturas: fP, lancamentos: lP, notas: nP, hoje: '2026-10-23' }));
+  const mes = (m) => R.meses.find(x => x.mes === m);
+  const desc = (m) => mes(m).itens.map(i => [i.tipo, i.descricao, i.parcela, i.valor]);
+
+  it('vai do mês atual até a última parcela', () => {
+    expect(R.meses.map(m => m.mes)).toEqual(['2026-10', '2026-11', '2026-12', '2027-01', '2027-02', '2027-03', '2027-04', '2027-05', '2027-06', '2027-07', '2027-08']);
+  });
+  it('faturas carregadas em aberto entram pelo total; as já pagas não', () => {
+    expect(desc('2026-10')).toEqual([['fatura', 'Fatura Caixa', '', 1500]]);
+    expect(mes('2026-11').itens.filter(i => i.tipo === 'fatura').map(i => i.valor)).toEqual([300]);
+  });
+  it('parcelas do cartão continuam depois da última fatura carregada do banco', () => {
+    expect(mes('2026-12').itens.find(i => i.tipo === 'parcela')).toMatchObject({ descricao: 'LOJA DE TINTAS', parcela: '8/10', valor: 120, banco: 'Caixa' });
+    expect(mes('2027-02').itens.find(i => i.tipo === 'parcela')).toMatchObject({ parcela: '10/10' });
+    expect(mes('2027-03').itens.some(i => i.descricao === 'LOJA DE TINTAS')).toBe(false);
+    expect(R.meses.some(m => m.itens.some(i => i.descricao === 'CURSO'))).toBe(false);
+  });
+  it('despesa digitada no crédito: parcelas a partir da fatura em que a compra cai', () => {
+    // Caixa fecha dia 1: compra de 20/10 cai na fatura de novembro; 10x de 129
+    expect(mes('2026-11').itens.find(i => i.descricao === 'Móveis Exemplo')).toMatchObject({ tipo: 'nota', parcela: '1/10', valor: 129, banco: 'Caixa', estimado: false });
+    expect(mes('2027-08').itens.find(i => i.descricao === 'Móveis Exemplo')).toMatchObject({ parcela: '10/10' });
+    // cartão desconhecido: estima a fatura do mês seguinte
+    expect(mes('2026-11').itens.find(i => i.descricao === 'TV Exemplo')).toMatchObject({ parcela: '1/3', valor: 333.34, estimado: true });
+    expect(mes('2027-01').itens.find(i => i.descricao === 'TV Exemplo')).toMatchObject({ parcela: '3/3', valor: 333.33 });
+  });
+  it('não conta de novo nota ligada, nota fora do cartão, Pix nem parcelas que já passaram', () => {
+    const nomes = new Set(R.meses.flatMap(m => m.itens.map(i => i.descricao)));
+    ['Ligada', 'Não está no cartão', 'Pix', 'Antiga'].forEach(n => expect(nomes.has(n)).toBe(false));
+  });
+  it('totais por mês e geral', () => {
+    expect(mes('2026-11').total).toBe(762.34);
+    expect(mes('2026-12').total).toBe(582.33);
+    expect(mes('2027-02').total).toBe(249);
+    expect(R.total).toBe(4450);
+  });
+});
+
 describe('utilidades', () => {
   const U = RX.despesasUtil;
   it('soma meses sem passar do fim do mês', () => {

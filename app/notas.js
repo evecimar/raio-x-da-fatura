@@ -5,6 +5,7 @@
    Uma nota:
    { id, arquivo, origem: 'foto'|'pdf'|'xml'|'manual', loja, cnpj, data: 'AAAA-MM-DD', hora: 'HH:MM',
      total: número, forma: 'dinheiro'|'pix'|'debito'|'credito'|'outro'|'', cartao_final: '1234'|'',
+     parcelas: em quantas vezes foi paga no crédito (1 = à vista; total continua sendo o valor da compra),
      itens: [{ descricao, qtd, unitario, total }], categoria,
      vinculo: id do lançamento | '', vinculo_tipo: 'auto'|'manual'|'',
      revisar: bool (algum campo importante pode estar errado), avisos: [texto], criada_em } */
@@ -35,6 +36,8 @@
     return `${alvo.getUTCFullYear()}-${String(alvo.getUTCMonth() + 1).padStart(2, '0')}-${String(Math.min(d, ult)).padStart(2, '0')}`;
   };
   const isoOk = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
+  /** Parcelas informadas na nota: só no crédito, de 1 a 48 (mesma regra de RX.parcelasDaNota em despesas-calculo.js). */
+  const parcelasDe = (n) => { const p = String(n && n.parcelas != null ? n.parcelas : '').trim(); return n && n.forma === 'credito' && /^\d{1,2}$/.test(p) && +p >= 1 && +p <= 48 ? +p : 1; };
   /** Datas em que a compra pode ter sido feita. Parcela n/N: o banco imprime a data da compra (PicPay, Caixa)
       ou a da cobrança (Nubank, n−1 meses depois). */
   RX.datasPossiveisDaCompra = function (l) {
@@ -72,22 +75,26 @@
       const nome = semelhanca(nota.loja, l);
       let score = (valorIgual ? 0.55 : Math.max(0, 0.35 - dv / nota.total)) + (dd == null ? 0 : Math.max(0, 0.3 * (1 - Math.abs(dd) / 6))) + 0.15 * nome;
       if (nota.cartao_final && l.cartao && nota.cartao_final === l.cartao) score += 0.2;
+      const mesmasParcelas = parcelado && parcelasDe(nota) > 1 && p.de === parcelasDe(nota);
+      if (mesmasParcelas) score += 0.15;
       const motivos = [];
       if (parcelado && !pelaParcela && dvTot <= Math.max(1, nota.total * 0.05)) motivos.push(`${p.de}x = ${tot.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`);
       motivos.push(valorIgual ? 'mesmo valor' : 'valor parecido');
       if (dd != null) motivos.push(dd === 0 ? 'mesmo dia' : `${Math.abs(dd)} dia${Math.abs(dd) > 1 ? 's' : ''} ${dd > 0 ? 'depois' : 'antes'}`);
       if (nome >= 0.5) motivos.push('nome parecido');
       if (nota.cartao_final && nota.cartao_final === l.cartao) motivos.push('mesmo cartão');
+      if (mesmasParcelas) motivos.push('mesmo nº de parcelas');
       const chave = parcelado ? [l.banco, l.cartao, tokens(l.estabelecimento || l.descricao).join(' '), p.de, v.toFixed(2)].join('|') : 'id:' + l.id;
-      out.push({ lancamento: { ...l }, score: Math.min(1, r2(score)), motivos, chave });
+      // score vai até 1 (é o que a tela mostra); bruto desempata quando vários passam de 1.
+      out.push({ lancamento: { ...l }, score: Math.min(1, r2(score)), bruto: r2(score), motivos, chave });
     }
     // Uma sugestão por compra: entre parcelas da mesma compra, fica a da fatura mais recente.
     const porCompra = new Map();
     for (const s of out) {
       const a = porCompra.get(s.chave);
-      if (!a || s.score > a.score || (s.score === a.score && String(s.lancamento.mes) > String(a.lancamento.mes))) porCompra.set(s.chave, s);
+      if (!a || s.bruto > a.bruto || (s.bruto === a.bruto && String(s.lancamento.mes) > String(a.lancamento.mes))) porCompra.set(s.chave, s);
     }
-    return [...porCompra.values()].map(({ chave, ...s }) => s).sort((a, b) => b.score - a.score).slice(0, todas ? 30 : 8);
+    return [...porCompra.values()].map(({ chave, ...s }) => s).sort((a, b) => b.bruto - a.bruto).slice(0, todas ? 30 : 8);
   };
 
   /** Vincula automaticamente quando há um candidato claro. Nunca mexe em vínculo manual. */
@@ -97,7 +104,7 @@
     if (nota.vinculo && estado.lancamentos.some(l => l.id === nota.vinculo)) return;
     const s = RX.sugestoesDeVinculo(nota, { estado });
     const melhor = s[0], segundo = s[1];
-    if (melhor && melhor.score >= 0.7 && (!segundo || melhor.score - segundo.score >= 0.12)) { nota.vinculo = melhor.lancamento.id; nota.vinculo_tipo = 'auto'; }
+    if (melhor && melhor.score >= 0.7 && (!segundo || melhor.bruto - segundo.bruto >= 0.12)) { nota.vinculo = melhor.lancamento.id; nota.vinculo_tipo = 'auto'; }
     else if (nota.vinculo_tipo === 'auto') { nota.vinculo = ''; nota.vinculo_tipo = ''; }
   }
   RX.revincularNotas = (estado) => estado.notas.forEach(n => autoVincular(n, estado));
@@ -111,6 +118,7 @@
     n.total = n.total != null && n.total !== '' && isFinite(n.total) && Number(n.total) > 0 ? r2(Number(n.total)) : null;
     n.itens = (n.itens || []).filter(i => i && i.descricao);
     n.forma = n.forma in FORMAS ? n.forma : '';
+    n.parcelas = parcelasDe(n);
     if (!n.categoria && RX.categorizar) n.categoria = RX.categorizar({ descricao: [n.loja, ...n.itens.map(i => i.descricao)].join(' '), valor: n.total || 1, tipo: 'compra' });
     if (n.categoria === 'Outros' && n.itens.some(i => /[aá]gua|g[aá]s|botij/i.test(i.descricao))) n.categoria = 'Casa';
     const faltando = [!n.loja && 'loja', !n.data && 'data', !(n.total > 0) && 'total'].filter(Boolean);
@@ -149,7 +157,7 @@
   };
   RX.editarNota = function (id, campos) {
     const n = achar(id); if (!n) return;
-    const permitidos = ['loja', 'cnpj', 'data', 'hora', 'total', 'forma', 'cartao_final', 'categoria', 'itens'];
+    const permitidos = ['loja', 'cnpj', 'data', 'hora', 'total', 'forma', 'cartao_final', 'parcelas', 'categoria', 'itens'];
     const importantes = ['loja', 'data', 'total', 'forma', 'itens'].some(k => k in campos);
     permitidos.forEach(k => { if (k in campos) n[k] = campos[k]; });
     if (importantes) { n.revisar = false; n.avisos = []; }
@@ -175,7 +183,7 @@
   };
 
   RX.csvNotas = function () {
-    const cols = ['data', 'hora', 'loja', 'cnpj', 'total', 'forma', 'cartao_final', 'categoria', 'origem', 'arquivo', 'vinculo'];
+    const cols = ['data', 'hora', 'loja', 'cnpj', 'total', 'forma', 'parcelas', 'cartao_final', 'categoria', 'origem', 'arquivo', 'vinculo'];
     const esc = (v) => { v = RX.celulaCSV(v); return /[",;\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     return [cols.join(','), ...RX.estado().notas.map(n => cols.map(c => esc(n[c])).join(','))].join('\n');
   };

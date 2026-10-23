@@ -37,6 +37,17 @@
       </div>
     </section>
 
+    <section class="sec" id="dp-prox" hidden>
+      <div class="sec-head">
+        <h2>Próximos meses</h2>
+        <p id="dp-prox-sub">O que já dá para prever nas próximas faturas do cartão.</p>
+      </div>
+      <div class="card">
+        <ul class="dp-prox" id="dp-prox-lista"></ul>
+        <p class="dp-prox-pe" id="dp-prox-pe"></p>
+      </div>
+    </section>
+
     <section class="sec" id="dp-mensal" hidden>
       <div class="sec-head">
         <h2>Mês a mês</h2>
@@ -103,7 +114,9 @@
         <label class="dp-campo"><span>Hora</span><input name="hora" type="time"></label>
         <label class="dp-campo"><span>Total (R$)</span><input name="total" inputmode="decimal" autocomplete="off" placeholder="0,00"></label>
         <label class="dp-campo"><span>Forma de pagamento</span><select name="forma"></select></label>
+        <label class="dp-campo" id="dp-campo-parcelas"><span>Em quantas vezes</span><select name="parcelas"></select></label>
         <label class="dp-campo" id="dp-campo-cartao"><span>Final do cartão</span><input name="cartao_final" inputmode="numeric" maxlength="4" placeholder="1234" autocomplete="off"></label>
+        <p class="dp-parc-info dp-larga" id="dp-parc-info" aria-live="polite" hidden></p>
         <label class="dp-campo"><span>Categoria</span><input name="categoria" list="dp-cats-lista" autocomplete="off" maxlength="60"></label>
         <datalist id="dp-cats-lista"></datalist>
         <label class="dp-campo dp-larga" id="dp-campo-cnpj"><span>CNPJ (opcional)</span><input name="cnpj" autocomplete="off" maxlength="20"></label>

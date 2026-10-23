@@ -68,6 +68,15 @@ describe('compra parcelada (nota traz o total, a fatura traz a parcela)', () => 
     const s = simples(RX.sugestoesDeVinculo(doEstado(n.id), { estado }));
     expect(s.map(x => x.lancamento.id)).toEqual(['p3']);
   });
+  it('quem informou "10x" liga com a compra em 10 parcelas, não com a de 5', () => {
+    estado.lancamentos.push(
+      lanc({ id: 'em10', mes: '2026-11', data: '2026-10-20', valor: 129, parcela: '1/10', descricao: 'MOVEIS EXEMPLO' }),
+      lanc({ id: 'em5', mes: '2026-11', data: '2026-10-20', valor: 258, parcela: '1/5', descricao: 'MOVEIS EXEMPLO' }));
+    const n = nota({ loja: 'Móveis Exemplo', data: '2026-10-20', total: 1290, parcelas: 10 });
+    expect(n.vinculo).toBe('em10');
+    const s = simples(RX.sugestoesDeVinculo(doEstado(n.id), { estado }));
+    expect(s[0].motivos).toContain('mesmo nº de parcelas');
+  });
 });
 
 describe('dados da nota', () => {
@@ -79,6 +88,16 @@ describe('dados da nota', () => {
     const n = nota({ total: '' });
     expect(n.revisar).toBe(true);
     expect(n.avisos).toContain('Não consegui ler o total.');
+  });
+  it('guarda em quantas vezes foi parcelada (só no crédito)', () => {
+    expect(nota({ parcelas: 10 }).parcelas).toBe(10);
+    expect(nota({ parcelas: '3', hora: '1' }).parcelas).toBe(3);
+    expect(nota({ forma: 'pix', parcelas: 10, hora: '2' }).parcelas).toBe(1);
+    expect(nota({ parcelas: 500, hora: '3' }).parcelas).toBe(1);
+    const n = nota({ hora: '4' });
+    RX.editarNota(n.id, { parcelas: 6 });
+    expect(doEstado(n.id).parcelas).toBe(6);
+    expect(RX.csvNotas().split('\n')[0]).toContain('parcelas');
   });
   it('a mesma nota duas vezes é ignorada', () => {
     nota(); nota();

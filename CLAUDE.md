@@ -63,7 +63,9 @@ Despesa = **compra**, no mês em que foi feita e pelo **valor total**. Como e qu
 - Estornos (valores negativos) descontam no mês da data do estorno. Créditos sobre tarifas (cashback de anuidade) vão para tarifas.
 - Tarifas e juros (IOF, anuidade, encargos) ficam **fora** do total de compras, num card à parte, no mês do ciclo da fatura (`dataEfetiva`: o que é lançado no dia do fechamento ou com data fora do ciclo conta no dia anterior ao fechamento).
 - Notas: pela data da nota. Ligadas a um lançamento não somam de novo. No crédito sem vínculo = "próxima fatura (ainda não carregada)" até a fatura chegar e o vínculo automático ligá-las.
-- "Como vai ser pago": compras à vista na fatura em que estão; parceladas divididas entre a fatura carregada e "parcelas em outras faturas"; Pix/dinheiro/débito "já saiu da conta".
+- "Como vai ser pago": compras à vista na fatura em que estão; parceladas divididas entre a fatura carregada e "parcelas em outras faturas"; Pix/dinheiro/débito "já saiu da conta". Nota no crédito sem fatura em N vezes (`parcelas`): a 1ª parcela em "próxima fatura", as outras em "parcelas em outras faturas".
+- Despesa no crédito parcelada (`parcelas` de 2 a 48, só no crédito): continua contando **pelo total no mês da compra**. As parcelas só servem para prever pagamentos (`valoresDasParcelas`: o centavo que sobra vai na 1ª).
+- "Próximos meses" (`proximosMeses`, do mês de hoje em diante, por fatura = mês do vencimento): faturas carregadas não pagas pelo total; parcelas do cartão que continuam depois da última fatura carregada do banco; notas no crédito sem vínculo (e não marcadas como "não está no cartão") divididas em parcelas. A 1ª parcela cai na primeira fatura que fecha no dia da compra ou depois (`faturaDaCompra`: banco achado pelo final do cartão nos lançamentos; sem banco, a fatura do mês seguinte, marcada como estimada).
 - **Mês parcial**: cada fatura cobre (fechamento anterior, fechamento]. Se as faturas carregadas não cobrem os dias do mês para algum banco (mais de 3 dias, sem contar dias futuros), o mês é marcado como parcial e o banco é citado.
 - A soma das despesas **não** é igual ao total das faturas (de propósito): a visão Faturas mostra o que pagar; Despesas mostra o que foi comprado.
 
@@ -78,7 +80,7 @@ Fluxo: pasta → `pdf-texto.js` extrai linhas → `lerFatura()` escolhe o leitor
 - `faturas`: mes (AAAA-MM do vencimento), banco, cartao, titular, total, vencimento, fechamento, limite_total, limite_utilizado, a_vencer, pagamento_minimo, juros_rotativo_am, arquivo.
 - `lancamentos`: id, mes, banco, cartao (final), portador (primeiro nome), adicional (sim/nao), data (AAAA-MM-DD), descricao, estabelecimento, categoria, parcela (`n/N`), valor (negativo = estorno), tipo (compra|estorno|iof|anuidade|encargo).
 - `historico_faturas` / `historico_lancamentos`: as mesmas colunas, todos os meses.
-- `notas`: todas as notas (objetos): id, arquivo, origem (foto|pdf|xml|manual), loja, cnpj, data, hora, total (número ou null), forma (dinheiro|pix|debito|credito|outro|''), cartao_final, itens[{descricao,qtd,unitario,total}], categoria, vinculo (id do lançamento), vinculo_tipo (auto|manual|''), revisar, avisos[], mes (mês da COMPRA).
+- `notas`: todas as notas (objetos): id, arquivo, origem (foto|pdf|xml|manual), loja, cnpj, data, hora, total (número ou null; na parcelada, o total da compra), forma (dinheiro|pix|debito|credito|outro|''), parcelas (1 a 48; 1 = à vista ou fora do crédito), cartao_final, itens[{descricao,qtd,unitario,total}], categoria, vinculo (id do lançamento), vinculo_tipo (auto|manual|''), revisar, avisos[], mes (mês da COMPRA).
 - `RaioX.mesSelecionado` pode ser `RaioX.TODOS` (`'*'`): "Todos os meses"; nesse caso `faturas`/`lancamentos` trazem todos os meses.
 - Faturas têm `paga` ('sim' quando a pessoa marca "Já paguei").
 - Valores chegam ao painel como texto; converta com `Number()`. Campos podem vir vazios: o painel mostra "não informado", nunca `NaN`.

@@ -123,7 +123,7 @@
   function desenhar() {
     if (visao !== 'despesas' || !visaoD) return;
     D = contexto();
-    const passos = [drawTopo, drawResumo, drawAtencao, drawFormas, drawCategorias, drawMensal, drawNotas];
+    const passos = [drawTopo, drawResumo, drawAtencao, drawFormas, drawCategorias, drawProximos, drawMensal, drawNotas];
     passos.forEach(f => { try { f(); } catch (e) { console.error('Raio-X da Fatura: despesas', f.name || '', e); } });
   }
 
@@ -301,6 +301,44 @@
       (D.totEstornos ? ` Estornos (${money(Math.abs(D.totEstornos))}) não aparecem nas barras, mas são descontados do total.` : '');
   }
 
+  /* Próximos meses: não depende do mês escolhido no topo, vai sempre de hoje em diante. */
+  function drawProximos() {
+    const sec = $('dp-prox'), ul = $('dp-prox-lista'), pe = $('dp-prox-pe');
+    ul.replaceChildren();
+    const faturas = dados('historico_faturas');
+    const R = RX.proximosMeses ? RX.proximosMeses({ faturas, lancamentos: dados('historico_lancamentos'), notas: D.notas, hoje: hoje() }) : { meses: [], total: 0 };
+    sec.hidden = !R.meses.length;
+    if (!R.meses.length) return;
+    const origem = new Map(D.notas.map(n => [n.id, n.origem]));
+    const max = Math.max(...R.meses.map(m => m.total)) || 1;
+    let estimado = false;
+    R.meses.forEach((m, i) => {
+      const li = el('li', 'dp-prox-mes'), d = el('details');
+      if (i === 0) d.open = true;
+      const conta = (t) => m.itens.filter(x => x.tipo === t).length;
+      const nf = conta('fatura'), np = conta('parcela') + conta('nota');
+      const s = el('summary', 'dp-prox-sum');
+      const tr = el('span', 'dp-prox-track'), fi = el('i'); fi.style.width = Math.max(1.5, m.total / max * 100) + '%'; tr.appendChild(fi);
+      s.append(el('span', 'nm', MesExt(m.mes)), el('span', 'money', money(m.total)),
+        el('span', 'qt', [nf ? pl(nf, 'fatura carregada', 'faturas carregadas') : '', np ? pl(np, 'parcela prevista', 'parcelas previstas') : ''].filter(Boolean).join(' · ')), tr);
+      const lista = el('ul', 'dp-prox-itens');
+      m.itens.forEach(it => {
+        if (it.estimado) estimado = true;
+        const f = it.tipo === 'fatura' ? faturas.find(x => x.banco + '|' + x.mes === it.id) : null;
+        const det = it.tipo === 'fatura'
+          ? [f && isoOk(f.vencimento) ? (f.vencimento < hoje() ? 'venceu ' : 'vence ') + ddm(f.vencimento) : '', 'ainda não paga']
+          : ['parcela ' + (it.parcela || 'única'), it.banco, it.tipo === 'parcela' ? 'do cartão' : (origem.get(it.id) === 'manual' ? 'despesa à mão' : 'nota no crédito'), it.estimado ? 'mês estimado' : ''];
+        const row = el('li', 'dp-pi-' + it.tipo);
+        row.append(el('span', 'nm', it.descricao), el('span', 'money', money(it.valor)), el('span', 'qt', det.filter(Boolean).join(' · ')));
+        lista.appendChild(row);
+      });
+      d.append(s, lista); li.appendChild(d); ul.appendChild(li);
+    });
+    $('dp-prox-sub').textContent = 'O que já dá para prever nas próximas faturas do cartão: faturas carregadas que ainda não foram pagas, parcelas que continuam e despesas parceladas no crédito. Toque num mês para ver o que cai nele.';
+    pe.textContent = `${money(R.total)} previstos em ${pl(R.meses.length, 'mês', 'meses')}. Faturas marcadas como pagas não entram; compras novas que ainda vão acontecer, também não.` +
+      (estimado ? ' “Mês estimado”: ainda não se sabe o dia em que esse cartão fecha, então a parcela pode cair um mês antes ou depois.' : '');
+  }
+
   function drawMensal() {
     const sec = $('dp-mensal'), body = $('dp-mensal-body');
     body.replaceChildren();
@@ -357,6 +395,10 @@
 
   function chipOrigem(n) { return el('span', 'dp-chip dp-o-' + (n.origem || 'manual'), ORIGEM[n.origem] || 'Digitada'); }
   function chipForma(n) { return el('span', 'dp-chip dp-forma dp-f-' + (n.forma || 'nd'), formaRot(n.forma)); }
+  const parcelasDe = (n) => RX.parcelasDaNota ? RX.parcelasDaNota(n) : 1;
+  /** "10x de R$ 129,00" (a parcela que se repete; o centavo que sobra fica na 1ª). */
+  const textoParcelas = (total, p) => { const v = RX.valoresDasParcelas ? RX.valoresDasParcelas(total, p) : [total / p]; return `${p}x de ${money(v[v.length - 1])}`; };
+  function chipParcelas(n) { const p = parcelasDe(n); return p > 1 && temValor(n.total) ? el('span', 'dp-chip dp-parc', textoParcelas(N(n.total), p)) : null; }
   function textoVinculo(l, n) {
     return [l.banco, l.cartao ? 'final ' + l.cartao : '', l.descricao || l.estabelecimento || ''].filter(Boolean).join(' · ') + (n.vinculo_tipo === 'manual' ? ' (manual)' : ' (automático)');
   }
@@ -380,7 +422,7 @@
     const tit = el('div', 'dp-nota-tit');
     tit.append(el('h3', null, nomeLoja(n)));
     const meta = el('div', 'dp-meta');
-    meta.append(el('span', 'muted', [dbr(n.data) || 'sem data', n.hora || ''].filter(Boolean).join(' · ')), chipForma(n), chipOrigem(n), el('span', 'dp-cat', catNota(n)));
+    meta.append(el('span', 'muted', [dbr(n.data) || 'sem data', n.hora || ''].filter(Boolean).join(' · ')), chipForma(n), chipParcelas(n), chipOrigem(n), el('span', 'dp-cat', catNota(n)));
     tit.appendChild(meta);
     head.append(tit, el('div', 'dp-nota-val' + (temValor(n.total) ? '' : ' muted'), temValor(n.total) ? money(n.total) : 'sem total'));
     li.appendChild(head);
@@ -541,9 +583,25 @@
     }
   }
   $('dp-item-add').addEventListener('click', () => { const r = linhaItem(null); $('dp-itens-lista').appendChild(r); r.querySelector('input').focus(); });
-  const mostrarCartao = () => { $('dp-campo-cartao').hidden = !['credito', 'debito'].includes(F('forma').value); };
-  form.addEventListener('input', (ev) => { if (ev.target.name === 'total') somaItens(); });
-  form.addEventListener('change', (ev) => { if (ev.target.name === 'forma') mostrarCartao(); });
+  const mostrarCartao = () => {
+    $('dp-campo-cartao').hidden = !['credito', 'debito'].includes(F('forma').value);
+    $('dp-campo-parcelas').hidden = F('forma').value !== 'credito';
+    infoParcelas();
+  };
+  /** Mostra como fica o parcelamento: valor de cada parcela e em que fatura cai a 1ª e a última. */
+  function infoParcelas() {
+    const box = $('dp-parc-info'), p = Number(F('parcelas').value) || 1, tot = lerNumero(F('total').value);
+    box.hidden = !(F('forma').value === 'credito' && p > 1 && tot > 0);
+    if (box.hidden) return;
+    const f = RX.faturaDaCompra ? RX.faturaDaCompra(F('data').value, F('cartao_final').value.replace(/\D/g, '').slice(-4), { faturas: dados('historico_faturas'), lancamentos: dados('historico_lancamentos') }) : { mes: '' };
+    const ult = f.mes && RX.despesasUtil ? RX.despesasUtil.addMesesMes(f.mes, p - 1) : '';
+    const v = RX.valoresDasParcelas ? RX.valoresDasParcelas(tot, p) : [];
+    fill(box, [B(textoParcelas(tot, p)), v.length > 1 && v[0] !== v[1] ? ` (a 1ª de ${money(v[0])})` : '',
+      f.mes ? ` · da fatura${f.banco ? ' ' + f.banco : ''} de ${mesExt(f.mes)} até a de ${mesExt(ult)}${f.estimado ? ' (estimado: informe o final do cartão para acertar o mês)' : ''}` : '',
+      '. As parcelas aparecem em “Próximos meses”.']);
+  }
+  form.addEventListener('input', (ev) => { if (ev.target.name === 'total') somaItens(); if (['total', 'data', 'cartao_final'].includes(ev.target.name)) infoParcelas(); });
+  form.addEventListener('change', (ev) => { if (ev.target.name === 'forma') mostrarCartao(); if (ev.target.name === 'parcelas') infoParcelas(); });
 
   function categoriasConhecidas() {
     const s = new Set(['Mercado', 'Alimentação fora', 'Farmácia e saúde', 'Casa', 'Transporte', 'Combustível', 'Lazer', 'Educação', 'Vestuário', 'Veículo', 'Outros']);
@@ -571,6 +629,10 @@
     F('total').value = n ? numCampo(n.total) : '';
     sel.value = n ? (n.forma || '') : 'dinheiro';
     F('cartao_final').value = n ? n.cartao_final || '' : '';
+    const sp = F('parcelas'); sp.replaceChildren();
+    const pAtual = n ? parcelasDe(n) : 1;
+    for (let k = 1; k <= Math.max(24, pAtual); k++) if (k <= 24 || k === pAtual) sp.add(new Option(k === 1 ? 'À vista (1x)' : k + 'x', String(k)));
+    sp.value = String(pAtual);
     F('categoria').value = n ? n.categoria || '' : '';
     F('cnpj').value = n ? n.cnpj || '' : '';
     $('dp-campo-cnpj').hidden = !n;
@@ -589,6 +651,7 @@
     const campos = {
       loja: F('loja').value.trim(), data: F('data').value, hora: F('hora').value, total: total != null ? r2(total) : null,
       forma: F('forma').value, cartao_final: ['credito', 'debito'].includes(F('forma').value) ? F('cartao_final').value.replace(/\D/g, '').slice(-4) : '',
+      parcelas: F('forma').value === 'credito' ? Number(F('parcelas').value) || 1 : 1,
       categoria: F('categoria').value.trim(), itens: lerItens()
     };
     if (editId) campos.cnpj = F('cnpj').value.trim();
@@ -602,7 +665,8 @@
     if (editId) { feito = `${campos.loja || 'Nota'} atualizada.`; RX.editarNota(editId, campos); }
     else {
       const m = campos.data.slice(0, 7), sel = RX.mesSelecionado;
-      feito = `Despesa “${campos.loja}” adicionada em ${dbr(campos.data)}.` + (sel !== (RX.TODOS || '*') && m !== sel ? ` Ela aparece em ${mesExt(m)}${(RX.meses ? RX.meses() : []).includes(m) ? '' : ' (veja em “Todos os meses”)'}.` : '');
+      feito = `Despesa “${campos.loja}” adicionada em ${dbr(campos.data)}.` + (sel !== (RX.TODOS || '*') && m !== sel ? ` Ela aparece em ${mesExt(m)}${(RX.meses ? RX.meses() : []).includes(m) ? '' : ' (veja em “Todos os meses”)'}.` : '') +
+        (campos.parcelas > 1 ? ` As ${campos.parcelas} parcelas estão em “Próximos meses”.` : '');
       RX.novaNota(campos);
     }
   });
@@ -615,6 +679,7 @@
     const c = $('dp-ver-corpo'); c.replaceChildren();
     const meta = el('div', 'dp-meta');
     meta.append(el('span', 'muted', [dbr(n.data) || 'sem data', n.hora || ''].filter(Boolean).join(' · ')), chipForma(n), chipOrigem(n));
+    const cp = chipParcelas(n); if (cp) meta.insertBefore(cp, meta.children[2]);
     c.append(el('div', 'dp-ver-total', temValor(n.total) ? money(n.total) : 'sem total'), meta);
     const HL = dados('historico_lancamentos'), l = n.vinculo ? HL.find(x => x.id === n.vinculo) : null;
     if (l) { const p = el('p', 'dp-vinc on'); fill(p, [el('span', 'dp-vinc-ic', '✓'), 'Vinculada a ', B(textoVinculo(l, n))]); c.appendChild(p); }

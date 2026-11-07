@@ -50,6 +50,51 @@
     return Array.from({ length: k }, (_, i) => (i === 0 ? cent - base * (k - 1) : base) / 100);
   };
 
+  /**
+   * Datas em que uma despesa recorrente acontece: a da nota e a mesma data nos meses seguintes (dia 31 vira o último dia
+   * do mês), até o mês de `recorrente_ate` ou até `ateMes`, o que vier antes. Nota que não é recorrente: só a própria data.
+   * @returns {{mes: string, data: string}[]}
+   */
+  RX.ocorrenciasRecorrentes = function (n, ateMes) {
+    if (!n || !isoOk(n.data)) return [];
+    const ini = n.data.slice(0, 7), out = [{ mes: ini, data: n.data }];
+    if (n.recorrente !== true) return out;
+    let fim = mesOk(ateMes) ? ateMes : ini;
+    if (mesOk(n.recorrente_ate) && n.recorrente_ate < fim) fim = n.recorrente_ate;
+    const dia = +n.data.slice(8, 10);
+    for (let m = addMesesMes(ini, 1), k = 0; m <= fim && k < 600; m = addMesesMes(m, 1), k++) {
+      const ult = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).getUTCDate();
+      out.push({ mes: m, data: m + '-' + String(Math.min(dia, ult)).padStart(2, '0') });
+    }
+    return out;
+  };
+  /** Nota no crédito que a fatura vai cobrar (não marcada como "não está no cartão"). */
+  const pelaFatura = (n) => n.forma === 'credito' && !(n.vinculo_tipo === 'manual' && !n.vinculo);
+  /**
+   * Junta às notas as repetições das despesas recorrentes, do mês seguinte ao da nota até `ateMes`. Cada repetição é
+   * uma nota "virtual" (id 'idDaNota@AAAA-MM', recorrente_de, virtual: true), sem vínculo. No crédito, a repetição que cai
+   * numa fatura já carregada do mesmo cartão não entra: o lançamento da fatura já conta essa compra.
+   */
+  function comRecorrencias(notas, ateMes, faturas, lancamentos) {
+    const carregadas = new Set(faturas.map(f => f.banco + '|' + f.mes));
+    const jaTem = new Set(notas.map(n => n && n.id)); // notas que já chegam com as repetições não duplicam
+    const out = [];
+    notas.forEach(n => {
+      out.push(n);
+      if (!n || n.recorrente !== true || n.virtual || !temValor(n.total)) return;
+      RX.ocorrenciasRecorrentes(n, ateMes).slice(1).forEach(o => {
+        if (pelaFatura(n)) {
+          const f = RX.faturaDaCompra(o.data, n.cartao_final, { faturas, lancamentos });
+          if (f.banco && carregadas.has(f.banco + '|' + f.mes)) return;
+        }
+        if (jaTem.has(n.id + '@' + o.mes)) return;
+        out.push({ ...n, id: n.id + '@' + o.mes, data: o.data, mes: o.mes, hora: '', arquivo: '', vinculo: '',
+          vinculo_tipo: !n.vinculo && n.vinculo_tipo === 'manual' ? 'manual' : '', revisar: false, avisos: [], recorrente_de: n.id, virtual: true });
+      });
+    });
+    return out;
+  }
+
   /** Banco do cartão de final `fim`, pelo que aparece nos lançamentos (o mais frequente). */
   function bancoDoCartao(fim, lancamentos) {
     if (!/^\d{4}$/.test(String(fim || ''))) return '';
@@ -98,6 +143,9 @@
     const todos = mes === (RX.TODOS || '*') || !mesOk(mes);
     if (todos) mes = '';
     const HL = lancamentos;
+    const diaDeHoje = isoOk(hoje) ? hoje : new Date().toISOString().slice(0, 10);
+    // Despesas recorrentes: uma repetição por mês até o mês de hoje (as futuras ficam em "Próximos meses").
+    notas = comRecorrencias(notas, diaDeHoje.slice(0, 7), faturas, lancamentos);
     const fechamentos = mapaFechamentos(faturas);
     const cicloDe = (l, f) => {
       const ant = fechamentos.get(l.banco + '|' + mesAnterior(l.mes));
@@ -163,7 +211,7 @@
     const totCartao = r2(totCartaoFaturas + totPend);
     const totFora = r2(soma(fora, n => temValor(n.total) ? N(n.total) : 0));
     const revisar = notas.filter(n => (n.revisar || !temValor(n.total)) && (todos || n.mes === mes || !n.mes));
-    const credSemVinculo = (todos ? notasMes : notasMes.concat(notas.filter(n => !n.mes))).filter(n => !n.revisar && temValor(n.total) && n.forma === 'credito' && !vinc(n) && n.vinculo_tipo !== 'manual');
+    const credSemVinculo = (todos ? notasMes : notasMes.concat(notas.filter(n => !n.mes))).filter(n => !n.revisar && !n.virtual && temValor(n.total) && n.forma === 'credito' && !vinc(n) && n.vinculo_tipo !== 'manual');
 
     // Mês das compras da fatura selecionada (normalmente o anterior): para a dica "ver compras de ...".
     let mesDasCompras = '';
@@ -186,7 +234,6 @@
       if (!ciclos.has(f.banco)) ciclos.set(f.banco, []);
       ciclos.get(f.banco).push([ini, t(fe)]);
     });
-    const diaDeHoje = isoOk(hoje) ? hoje : new Date().toISOString().slice(0, 10);
     /** Bancos cujas faturas carregadas não cobrem o mês m (dias futuros não contam). */
     const faltaFatura = (m) => {
       if (!mesOk(m)) return [];
@@ -287,7 +334,22 @@
       if (!f.mes) return;
       vals.forEach((v, i) => add(addMesesMes(f.mes, i), { tipo: 'nota', descricao: String(n.loja || '').trim() || 'Despesa no crédito', banco: f.banco, parcela: de > 1 ? `${i + 1}/${de}` : '', valor: v, estimado: f.estimado, id: n.id }));
     });
-    const ordem = { fatura: 0, parcela: 1, nota: 2 };
+    // Despesas recorrentes: as próximas repetições, até o fim ou 12 meses à frente. Pix, dinheiro e débito saem no mês
+    // em que acontecem (de hoje em diante); no crédito, cada repetição vai para a fatura em que cai (as deste mês já estão nas notas).
+    const limite = addMesesMes(mesHoje, 12);
+    notas.filter(n => n && n.recorrente === true && !n.virtual && temValor(n.total)).forEach(n => {
+      const desc = String(n.loja || '').trim() || 'Despesa recorrente', v = r2(N(n.total));
+      RX.ocorrenciasRecorrentes(n, limite).forEach(o => {
+        if (pelaFatura(n)) {
+          if (o.mes <= mesHoje) return;
+          const f = RX.faturaDaCompra(o.data, n.cartao_final, { faturas, lancamentos });
+          add(f.mes, { tipo: 'recorrente', descricao: desc, banco: f.banco, parcela: '', valor: v, estimado: f.estimado, id: n.id, forma: n.forma });
+        } else if (o.data >= diaHoje) {
+          add(o.mes, { tipo: 'recorrente', descricao: desc, banco: '', parcela: '', valor: v, estimado: false, id: n.id, forma: n.forma, data: o.data });
+        }
+      });
+    });
+    const ordem = { fatura: 0, recorrente: 1, parcela: 2, nota: 3 };
     const meses = [...new Set(itens.map(i => i.mes))].sort().map(mes => {
       const doMes = itens.filter(i => i.mes === mes).sort((a, b) => ordem[a.tipo] - ordem[b.tipo] || b.valor - a.valor).map(({ mes: _, ...i }) => i);
       return { mes, total: r2(soma(doMes, i => i.valor)), itens: doMes };

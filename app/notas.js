@@ -6,6 +6,7 @@
    { id, arquivo, origem: 'foto'|'pdf'|'xml'|'manual', loja, cnpj, data: 'AAAA-MM-DD', hora: 'HH:MM',
      total: número, forma: 'dinheiro'|'pix'|'debito'|'credito'|'outro'|'', cartao_final: '1234'|'',
      parcelas: em quantas vezes foi paga no crédito (1 = à vista; total continua sendo o valor da compra),
+     recorrente: true se repete todo mês (aluguel, mensalidade…), recorrente_ate: último mês 'AAAA-MM' ou '' (sem fim),
      itens: [{ descricao, qtd, unitario, total }], categoria,
      vinculo: id do lançamento | '', vinculo_tipo: 'auto'|'manual'|'',
      revisar: bool (algum campo importante pode estar errado), avisos: [texto], criada_em } */
@@ -119,6 +120,11 @@
     n.itens = (n.itens || []).filter(i => i && i.descricao);
     n.forma = n.forma in FORMAS ? n.forma : '';
     n.parcelas = parcelasDe(n);
+    // Recorrente: repete todo mês no mesmo dia, até o mês de recorrente_ate ('AAAA-MM'; vazio = sem data para acabar).
+    n.recorrente = n.recorrente === true || n.recorrente === 'sim';
+    const ate = String(n.recorrente_ate || '');
+    n.recorrente_ate = n.recorrente && /^\d{4}-(0[1-9]|1[0-2])$/.test(ate) && (!isoOk(n.data) || ate >= n.data.slice(0, 7)) ? ate : '';
+    if (n.recorrente) n.parcelas = 1;
     if (!n.categoria && RX.categorizar) n.categoria = RX.categorizar({ descricao: [n.loja, ...n.itens.map(i => i.descricao)].join(' '), valor: n.total || 1, tipo: 'compra' });
     if (n.categoria === 'Outros' && n.itens.some(i => /[aá]gua|g[aá]s|botij/i.test(i.descricao))) n.categoria = 'Casa';
     const faltando = [!n.loja && 'loja', !n.data && 'data', !(n.total > 0) && 'total'].filter(Boolean);
@@ -157,7 +163,7 @@
   };
   RX.editarNota = function (id, campos) {
     const n = achar(id); if (!n) return;
-    const permitidos = ['loja', 'cnpj', 'data', 'hora', 'total', 'forma', 'cartao_final', 'parcelas', 'categoria', 'itens'];
+    const permitidos = ['loja', 'cnpj', 'data', 'hora', 'total', 'forma', 'cartao_final', 'parcelas', 'recorrente', 'recorrente_ate', 'categoria', 'itens'];
     const importantes = ['loja', 'data', 'total', 'forma', 'itens'].some(k => k in campos);
     permitidos.forEach(k => { if (k in campos) n[k] = campos[k]; });
     if (importantes) { n.revisar = false; n.avisos = []; }
@@ -183,7 +189,7 @@
   };
 
   RX.csvNotas = function () {
-    const cols = ['data', 'hora', 'loja', 'cnpj', 'total', 'forma', 'parcelas', 'cartao_final', 'categoria', 'origem', 'arquivo', 'vinculo'];
+    const cols = ['data', 'hora', 'loja', 'cnpj', 'total', 'forma', 'parcelas', 'recorrente', 'recorrente_ate', 'cartao_final', 'categoria', 'origem', 'arquivo', 'vinculo'];
     const esc = (v) => { v = RX.celulaCSV(v); return /[",;\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     return [cols.join(','), ...RX.estado().notas.map(n => cols.map(c => esc(n[c])).join(','))].join('\n');
   };

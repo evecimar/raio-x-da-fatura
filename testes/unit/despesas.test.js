@@ -213,6 +213,65 @@ describe('próximos meses (o que esperar pagar)', () => {
   });
 });
 
+describe('despesa recorrente (todo mês)', () => {
+  const ids = (C) => C.notasMes.map(n => n.id);
+  it('repete no mesmo dia de cada mês (dia que não existe vira o último do mês)', () => {
+    const n = { data: '2026-08-31', recorrente: true, recorrente_ate: '2026-11' };
+    expect(simples(RX.ocorrenciasRecorrentes(n, '2027-12')).map(o => o.data)).toEqual(['2026-08-31', '2026-09-30', '2026-10-31', '2026-11-30']);
+    expect(simples(RX.ocorrenciasRecorrentes({ data: '2026-08-05', recorrente: true }, '2026-10')).map(o => o.mes)).toEqual(['2026-08', '2026-09', '2026-10']);
+    expect(simples(RX.ocorrenciasRecorrentes({ data: '2026-08-05' }, '2026-10')).map(o => o.mes)).toEqual(['2026-08']);
+    expect(simples(RX.ocorrenciasRecorrentes({ data: '2026-08-05', recorrente: true, recorrente_ate: '2026-03' }, '2026-10')).map(o => o.mes)).toEqual(['2026-08']);
+  });
+  it('aluguel no Pix: entra em cada mês até o mês atual, como despesa fora do cartão', () => {
+    const aluguel = nota({ id: 'alug', loja: 'Aluguel', data: '2026-08-05', total: 1500, forma: 'pix', recorrente: true, recorrente_ate: '' });
+    const calc = (mes) => RX.calcularDespesas({ faturas, lancamentos: [], notas: [aluguel], mes, hoje: HOJE });
+    expect(ids(calc('2026-08'))).toEqual(['alug']);
+    expect(ids(calc('2026-09'))).toEqual(['alug@2026-09']);
+    expect(calc('2026-10').totFora).toBe(1500);
+    expect(ids(calc('2026-11'))).toEqual([]);            // meses futuros ficam em "Próximos meses"
+    expect(calc('*').totFora).toBe(4500);
+    const v = calc('2026-09').notasMes[0];
+    expect(v).toMatchObject({ loja: 'Aluguel', data: '2026-09-05', recorrente_de: 'alug', virtual: true, vinculo: '' });
+  });
+  it('para no mês do "até quando"', () => {
+    const a = nota({ loja: 'Academia', data: '2026-08-10', total: 99, forma: 'debito', recorrente: true, recorrente_ate: '2026-09' });
+    expect(RX.calcularDespesas({ faturas, lancamentos: [], notas: [a], mes: '*', hoje: HOJE }).totFora).toBe(198);
+  });
+  it('no crédito: o mês que já está numa fatura carregada não conta de novo (o lançamento do cartão já conta)', () => {
+    // Caixa fecha dia 1: 12/09 cai na fatura de outubro (carregada); 12/10 cai na de novembro (não carregada)
+    const st = nota({ id: 'st', loja: 'Streaming Exemplo', data: '2026-08-12', total: 39.9, cartao_final: '1111', recorrente: true });
+    const C = RX.calcularDespesas({ faturas, lancamentos, notas: [st], mes: '*', hoje: HOJE });
+    expect(ids(C)).toEqual(['st', 'st@2026-10']);
+    expect(C.pendentes.map(n => n.id)).toContain('st@2026-10');
+    expect(C.credSemVinculo.some(n => n.virtual)).toBe(false);   // não pede vínculo para a repetição
+  });
+  it('próximos meses: as repetições futuras, até 12 meses à frente (ou até o fim)', () => {
+    const aluguel = nota({ loja: 'Aluguel', data: '2026-08-05', total: 1500, forma: 'pix', recorrente: true });
+    const R = simples(RX.proximosMeses({ faturas, lancamentos: [], notas: [aluguel], hoje: '2026-10-23' }));
+    const m = R.meses.filter(x => x.itens.some(i => i.descricao === 'Aluguel')).map(x => x.mes);
+    expect(m[0]).toBe('2026-11');                         // 05/10 já passou
+    expect(m.length).toBe(12);
+    expect(R.meses[0].itens[0]).toMatchObject({ tipo: 'recorrente', descricao: 'Aluguel', valor: 1500, parcela: '', banco: '' });
+    const fim = nota({ loja: 'Aluguel', data: '2026-08-05', total: 1500, forma: 'pix', recorrente: true, recorrente_ate: '2027-01' });
+    expect(simples(RX.proximosMeses({ faturas, lancamentos: [], notas: [fim], hoje: '2026-10-23' })).meses.map(x => x.mes)).toEqual(['2026-11', '2026-12', '2027-01']);
+    const hojeAinda = simples(RX.proximosMeses({ faturas, lancamentos: [], notas: [aluguel], hoje: '2026-10-03' }));
+    expect(hojeAinda.meses[0]).toMatchObject({ mes: '2026-10', total: 1500 }); // vence dia 05 deste mês
+  });
+  it('não repete de novo quando recebe as notas já com as repetições (sem duplicar)', () => {
+    const aluguel = nota({ loja: 'Aluguel', data: '2026-08-05', total: 1500, forma: 'pix', recorrente: true });
+    const C = RX.calcularDespesas({ faturas, lancamentos: [], notas: [aluguel], mes: '*', hoje: HOJE });
+    expect(RX.calcularDespesas({ faturas, lancamentos: [], notas: C.notas, mes: '*', hoje: HOJE }).totFora).toBe(4500);
+    const R = simples(RX.proximosMeses({ faturas, lancamentos: [], notas: C.notas, hoje: '2026-10-23' }));
+    expect(R.meses.every(m => m.itens.length === 1)).toBe(true);
+  });
+  it('próximos meses no crédito: cada repetição vai para a fatura em que cai', () => {
+    const st = nota({ loja: 'Streaming Exemplo', data: '2026-08-12', total: 39.9, cartao_final: '1111', recorrente: true, recorrente_ate: '2026-12' });
+    const R = simples(RX.proximosMeses({ faturas, lancamentos, notas: [st], hoje: '2026-10-23' }));
+    const onde = R.meses.filter(x => x.itens.some(i => i.descricao === 'Streaming Exemplo')).map(x => x.mes);
+    expect(onde).toEqual(['2026-11', '2026-12', '2027-01']); // 12/10 → nov, 12/11 → dez, 12/12 → jan
+  });
+});
+
 describe('utilidades', () => {
   const U = RX.despesasUtil;
   it('soma meses sem passar do fim do mês', () => {

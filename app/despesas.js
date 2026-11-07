@@ -306,7 +306,7 @@
     const sec = $('dp-prox'), ul = $('dp-prox-lista'), pe = $('dp-prox-pe');
     ul.replaceChildren();
     const faturas = dados('historico_faturas');
-    const R = RX.proximosMeses ? RX.proximosMeses({ faturas, lancamentos: dados('historico_lancamentos'), notas: D.notas, hoje: hoje() }) : { meses: [], total: 0 };
+    const R = RX.proximosMeses ? RX.proximosMeses({ faturas, lancamentos: dados('historico_lancamentos'), notas: dados('notas'), hoje: hoje() }) : { meses: [], total: 0 };
     sec.hidden = !R.meses.length;
     if (!R.meses.length) return;
     const origem = new Map(D.notas.map(n => [n.id, n.origem]));
@@ -316,16 +316,18 @@
       const li = el('li', 'dp-prox-mes'), d = el('details');
       if (i === 0) d.open = true;
       const conta = (t) => m.itens.filter(x => x.tipo === t).length;
-      const nf = conta('fatura'), np = conta('parcela') + conta('nota');
+      const nf = conta('fatura'), np = conta('parcela') + conta('nota'), nr = conta('recorrente');
       const s = el('summary', 'dp-prox-sum');
       const tr = el('span', 'dp-prox-track'), fi = el('i'); fi.style.width = Math.max(1.5, m.total / max * 100) + '%'; tr.appendChild(fi);
       s.append(el('span', 'nm', MesExt(m.mes)), el('span', 'money', money(m.total)),
-        el('span', 'qt', [nf ? pl(nf, 'fatura carregada', 'faturas carregadas') : '', np ? pl(np, 'parcela prevista', 'parcelas previstas') : ''].filter(Boolean).join(' · ')), tr);
+        el('span', 'qt', [nf ? pl(nf, 'fatura carregada', 'faturas carregadas') : '', nr ? pl(nr, 'conta recorrente', 'contas recorrentes') : '', np ? pl(np, 'parcela prevista', 'parcelas previstas') : ''].filter(Boolean).join(' · ')), tr);
       const lista = el('ul', 'dp-prox-itens');
       m.itens.forEach(it => {
         if (it.estimado) estimado = true;
         const f = it.tipo === 'fatura' ? faturas.find(x => x.banco + '|' + x.mes === it.id) : null;
-        const det = it.tipo === 'fatura'
+        const det = it.tipo === 'recorrente'
+          ? ['todo mês', formaRot(it.forma).toLowerCase(), it.data && isoOk(it.data) ? 'dia ' + ddm(it.data) : '', it.banco ? 'fatura ' + it.banco : '', it.estimado ? 'mês estimado' : '']
+          : it.tipo === 'fatura'
           ? [f && isoOk(f.vencimento) ? (f.vencimento < hoje() ? 'venceu ' : 'vence ') + ddm(f.vencimento) : '', 'ainda não paga']
           : ['parcela ' + (it.parcela || 'única'), it.banco, it.tipo === 'parcela' ? 'do cartão' : (origem.get(it.id) === 'manual' ? 'despesa à mão' : 'nota no crédito'), it.estimado ? 'mês estimado' : ''];
         const row = el('li', 'dp-pi-' + it.tipo);
@@ -334,8 +336,8 @@
       });
       d.append(s, lista); li.appendChild(d); ul.appendChild(li);
     });
-    $('dp-prox-sub').textContent = 'O que já dá para prever nas próximas faturas do cartão: faturas carregadas que ainda não foram pagas, parcelas que continuam e despesas parceladas no crédito. Toque num mês para ver o que cai nele.';
-    pe.textContent = `${money(R.total)} previstos em ${pl(R.meses.length, 'mês', 'meses')}. Faturas marcadas como pagas não entram; compras novas que ainda vão acontecer, também não.` +
+    $('dp-prox-sub').textContent = 'O que já dá para prever: faturas carregadas que ainda não foram pagas, parcelas que continuam, despesas parceladas no crédito e despesas recorrentes (aluguel, mensalidade…). Toque num mês para ver o que cai nele.';
+    pe.textContent = `${money(R.total)} previstos em ${pl(R.meses.length, 'mês', 'meses')}. Faturas marcadas como pagas não entram; compras novas que ainda vão acontecer só entram se forem recorrentes (sem data para acabar, até 12 meses à frente).` +
       (estimado ? ' “Mês estimado”: ainda não se sabe o dia em que esse cartão fecha, então a parcela pode cair um mês antes ou depois.' : '');
   }
 
@@ -399,6 +401,15 @@
   /** "10x de R$ 129,00" (a parcela que se repete; o centavo que sobra fica na 1ª). */
   const textoParcelas = (total, p) => { const v = RX.valoresDasParcelas ? RX.valoresDasParcelas(total, p) : [total / p]; return `${p}x de ${money(v[v.length - 1])}`; };
   function chipParcelas(n) { const p = parcelasDe(n); return p > 1 && temValor(n.total) ? el('span', 'dp-chip dp-parc', textoParcelas(N(n.total), p)) : null; }
+  /** "Todo mês" / "Todo mês até março de 2027" (despesa recorrente e as repetições dela). */
+  function chipRecorrente(n) {
+    if (n.recorrente !== true) return null;
+    const c = el('span', 'dp-chip dp-rec', '↻ Todo mês' + (mesOk(n.recorrente_ate) ? ' até ' + mesExt(n.recorrente_ate) : ''));
+    c.title = n.virtual ? 'Repetição da despesa recorrente' : 'Despesa recorrente';
+    return c;
+  }
+  /** 'AAAA-MM' a partir do campo de mês (aceita também MM/AAAA, onde o navegador não tem seletor de mês). */
+  const lerMes = (v) => { const t = String(v || '').trim(), m = t.match(/^(\d{1,2})\/(\d{4})$/); const r = m ? m[2] + '-' + m[1].padStart(2, '0') : t; return /^\d{4}-(0[1-9]|1[0-2])$/.test(r) ? r : ''; };
   function textoVinculo(l, n) {
     return [l.banco, l.cartao ? 'final ' + l.cartao : '', l.descricao || l.estabelecimento || ''].filter(Boolean).join(' · ') + (n.vinculo_tipo === 'manual' ? ' (manual)' : ' (automático)');
   }
@@ -422,14 +433,19 @@
     const tit = el('div', 'dp-nota-tit');
     tit.append(el('h3', null, nomeLoja(n)));
     const meta = el('div', 'dp-meta');
-    meta.append(el('span', 'muted', [dbr(n.data) || 'sem data', n.hora || ''].filter(Boolean).join(' · ')), chipForma(n), chipParcelas(n), chipOrigem(n), el('span', 'dp-cat', catNota(n)));
+    meta.append(el('span', 'muted', [dbr(n.data) || 'sem data', n.hora || ''].filter(Boolean).join(' · ')), ...[chipForma(n), chipParcelas(n), chipRecorrente(n), chipOrigem(n)].filter(Boolean), el('span', 'dp-cat', catNota(n)));
     tit.appendChild(meta);
     head.append(tit, el('div', 'dp-nota-val' + (temValor(n.total) ? '' : ' muted'), temValor(n.total) ? money(n.total) : 'sem total'));
     li.appendChild(head);
     // vínculo
     const vl = el('div', 'dp-vinc');
     const l = D.vinc(n);
-    if (l) {
+    if (n.virtual) {
+      const orig = acharNota(n.recorrente_de);
+      const t = el('p'); fill(t, [el('span', 'dp-vinc-ic', '↻'), 'Repetição automática de ', B(nomeLoja(n)), orig && isoOk(orig.data) ? ` (desde ${dbr(orig.data)})` : '',
+        n.forma === 'credito' && n.vinculo_tipo !== 'manual' ? ' · conta como cartão até a fatura chegar' : '']);
+      vl.append(t);
+    } else if (l) {
       vl.classList.add('on');
       const t = el('p'); fill(t, [el('span', 'dp-vinc-ic', '✓'), 'Vinculada a ', B(textoVinculo(l, n))]);
       const b = el('button', 'dp-link', 'Desfazer'); b.type = 'button';
@@ -453,6 +469,13 @@
       pe.appendChild(d);
     } else pe.appendChild(el('span', 'muted dp-semitens', 'Sem itens'));
     const ac = el('div', 'dp-nota-acoes');
+    if (n.virtual) {
+      const er = el('button', 'dp-btn dp-btn-sm', 'Editar recorrência'); er.type = 'button';
+      er.title = 'Mudar valor, forma ou até quando repete (vale para todos os meses)';
+      er.addEventListener('click', () => abrirEdicao(n.recorrente_de));
+      ac.append(er); pe.appendChild(ac); li.appendChild(pe);
+      return li;
+    }
     const ed = el('button', 'dp-btn dp-btn-sm', 'Editar'); ed.type = 'button'; ed.addEventListener('click', () => abrirEdicao(n.id));
     const rm = el('button', 'dp-btn dp-btn-sm dp-perigo', 'Remover'); rm.type = 'button';
     rm.addEventListener('click', () => confirmarRemocao(ac, rm, n));
@@ -466,7 +489,7 @@
   function confirmarRemocao(ac, rm, n) {
     rm.hidden = true;
     const box = el('span', 'dp-confirma');
-    box.append(el('span', null, 'Remover esta nota?'));
+    box.append(el('span', null, n.recorrente === true ? 'Remover esta despesa e todas as repetições?' : 'Remover esta nota?'));
     const sim = el('button', 'dp-btn dp-btn-sm dp-perigo-on', 'Sim, remover'); sim.type = 'button';
     const nao = el('button', 'dp-btn dp-btn-sm', 'Cancelar'); nao.type = 'button';
     const voltar = () => { box.remove(); rm.hidden = false; rm.focus(); };
@@ -584,10 +607,27 @@
   }
   $('dp-item-add').addEventListener('click', () => { const r = linhaItem(null); $('dp-itens-lista').appendChild(r); r.querySelector('input').focus(); });
   const mostrarCartao = () => {
+    const rec = F('recorrente').checked;
     $('dp-campo-cartao').hidden = !['credito', 'debito'].includes(F('forma').value);
-    $('dp-campo-parcelas').hidden = F('forma').value !== 'credito';
-    infoParcelas();
+    $('dp-campo-parcelas').hidden = F('forma').value !== 'credito' || rec; // recorrente não é parcelada
+    if (rec) F('parcelas').value = '1';
+    $('dp-campo-rec-ate').hidden = !rec;
+    infoParcelas(); infoRecorrente();
   };
+  /** Explica a recorrência: em que dia repete, desde quando e até quando. */
+  function infoRecorrente() {
+    const box = $('dp-rec-info'), d = F('data').value;
+    box.hidden = !F('recorrente').checked;
+    if (box.hidden) return;
+    const ate = lerMes(F('recorrente_ate').value), ini = isoOk(d) ? d.slice(0, 7) : '';
+    if (!ini) { fill(box, ['Escolha a data da primeira vez para saber em que dia ela repete.']); return; }
+    if (ate && ate < ini) { fill(box, [B('“Até quando” é antes da primeira vez.'), ' Escolha um mês a partir de ' + mesExt(ini) + '.']); return; }
+    const vezes = ate ? (+ate.slice(0, 4) - +ini.slice(0, 4)) * 12 + (+ate.slice(5) - +ini.slice(5)) + 1 : 0;
+    fill(box, [B('Todo dia ' + (+d.slice(8))), ` (ou o último dia do mês), a partir de ${mesExt(ini)}`,
+      ate ? ` até ${mesExt(ate)}: ${pl(vezes, 'vez', 'vezes')}.` : ', sem data para acabar.',
+      ' Cada mês entra nas despesas daquele mês, e as próximas aparecem em “Próximos meses”.',
+      F('forma').value === 'credito' ? ' No crédito, o mês que já estiver numa fatura carregada conta pelo lançamento do cartão.' : '']);
+  }
   /** Mostra como fica o parcelamento: valor de cada parcela e em que fatura cai a 1ª e a última. */
   function infoParcelas() {
     const box = $('dp-parc-info'), p = Number(F('parcelas').value) || 1, tot = lerNumero(F('total').value);
@@ -600,8 +640,8 @@
       f.mes ? ` · da fatura${f.banco ? ' ' + f.banco : ''} de ${mesExt(f.mes)} até a de ${mesExt(ult)}${f.estimado ? ' (estimado: informe o final do cartão para acertar o mês)' : ''}` : '',
       '. As parcelas aparecem em “Próximos meses”.']);
   }
-  form.addEventListener('input', (ev) => { if (ev.target.name === 'total') somaItens(); if (['total', 'data', 'cartao_final'].includes(ev.target.name)) infoParcelas(); });
-  form.addEventListener('change', (ev) => { if (ev.target.name === 'forma') mostrarCartao(); if (ev.target.name === 'parcelas') infoParcelas(); });
+  form.addEventListener('input', (ev) => { if (ev.target.name === 'total') somaItens(); if (['total', 'data', 'cartao_final'].includes(ev.target.name)) infoParcelas(); if (['data', 'recorrente_ate'].includes(ev.target.name)) infoRecorrente(); });
+  form.addEventListener('change', (ev) => { if (['forma', 'recorrente'].includes(ev.target.name)) mostrarCartao(); if (ev.target.name === 'parcelas') infoParcelas(); if (ev.target.name === 'recorrente_ate') infoRecorrente(); });
 
   function categoriasConhecidas() {
     const s = new Set(['Mercado', 'Alimentação fora', 'Farmácia e saúde', 'Casa', 'Transporte', 'Combustível', 'Lazer', 'Educação', 'Vestuário', 'Veículo', 'Outros']);
@@ -633,6 +673,8 @@
     const pAtual = n ? parcelasDe(n) : 1;
     for (let k = 1; k <= Math.max(24, pAtual); k++) if (k <= 24 || k === pAtual) sp.add(new Option(k === 1 ? 'À vista (1x)' : k + 'x', String(k)));
     sp.value = String(pAtual);
+    F('recorrente').checked = !!(n && n.recorrente === true);
+    F('recorrente_ate').value = n && mesOk(n.recorrente_ate) ? n.recorrente_ate : '';
     F('categoria').value = n ? n.categoria || '' : '';
     F('cnpj').value = n ? n.cnpj || '' : '';
     $('dp-campo-cnpj').hidden = !n;
@@ -651,7 +693,8 @@
     const campos = {
       loja: F('loja').value.trim(), data: F('data').value, hora: F('hora').value, total: total != null ? r2(total) : null,
       forma: F('forma').value, cartao_final: ['credito', 'debito'].includes(F('forma').value) ? F('cartao_final').value.replace(/\D/g, '').slice(-4) : '',
-      parcelas: F('forma').value === 'credito' ? Number(F('parcelas').value) || 1 : 1,
+      parcelas: F('forma').value === 'credito' && !F('recorrente').checked ? Number(F('parcelas').value) || 1 : 1,
+      recorrente: F('recorrente').checked, recorrente_ate: F('recorrente').checked ? lerMes(F('recorrente_ate').value) : '',
       categoria: F('categoria').value.trim(), itens: lerItens()
     };
     if (editId) campos.cnpj = F('cnpj').value.trim();
@@ -660,13 +703,15 @@
     if (!editId && !isoOk(campos.data)) falta.push('a data');
     if (F('total').value.trim() && (total == null || total <= 0)) falta.push('um total válido (ex.: 54,90)');
     else if (!editId && !(total > 0)) falta.push('o total');
+    if (campos.recorrente && F('recorrente_ate').value.trim() && (!campos.recorrente_ate || (isoOk(campos.data) && campos.recorrente_ate < campos.data.slice(0, 7)))) falta.push('um “até quando” a partir do mês da primeira vez (ou deixe em branco)');
     if (falta.length) { erro.hidden = false; erro.textContent = 'Falta ' + falta.join(', ') + '.'; return; }
     dlgE.close();
     if (editId) { feito = `${campos.loja || 'Nota'} atualizada.`; RX.editarNota(editId, campos); }
     else {
       const m = campos.data.slice(0, 7), sel = RX.mesSelecionado;
       feito = `Despesa “${campos.loja}” adicionada em ${dbr(campos.data)}.` + (sel !== (RX.TODOS || '*') && m !== sel ? ` Ela aparece em ${mesExt(m)}${(RX.meses ? RX.meses() : []).includes(m) ? '' : ' (veja em “Todos os meses”)'}.` : '') +
-        (campos.parcelas > 1 ? ` As ${campos.parcelas} parcelas estão em “Próximos meses”.` : '');
+        (campos.parcelas > 1 ? ` As ${campos.parcelas} parcelas estão em “Próximos meses”.` : '') +
+        (campos.recorrente ? ` Ela se repete todo mês${campos.recorrente_ate ? ' até ' + mesExt(campos.recorrente_ate) : ''}; as próximas estão em “Próximos meses”.` : '');
       RX.novaNota(campos);
     }
   });

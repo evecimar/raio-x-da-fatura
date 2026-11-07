@@ -99,6 +99,16 @@ describe('dados da nota', () => {
     expect(doEstado(n.id).parcelas).toBe(6);
     expect(RX.csvNotas().split('\n')[0]).toContain('parcelas');
   });
+  it('guarda se é recorrente e até quando', () => {
+    expect(nota({ forma: 'pix', recorrente: true, recorrente_ate: '2027-03', hora: '5' })).toMatchObject({ recorrente: true, recorrente_ate: '2027-03' });
+    expect(nota({ forma: 'pix', recorrente: true, recorrente_ate: '2020-01', hora: '6' }).recorrente_ate).toBe('');   // antes da compra
+    expect(nota({ forma: 'pix', recorrente: 'talvez', recorrente_ate: '2027-03', hora: '7' })).toMatchObject({ recorrente: false, recorrente_ate: '' });
+    expect(nota({ recorrente: true, parcelas: 10, hora: '8' }).parcelas).toBe(1);   // recorrente não é parcelada
+    const n = nota({ forma: 'dinheiro', hora: '9' });
+    RX.editarNota(n.id, { recorrente: true, recorrente_ate: '2027-06' });
+    expect(doEstado(n.id)).toMatchObject({ recorrente: true, recorrente_ate: '2027-06' });
+    expect(RX.csvNotas().split('\n')[0]).toContain('recorrente');
+  });
   it('a mesma nota duas vezes é ignorada', () => {
     nota(); nota();
     expect(estado.notas).toHaveLength(1);

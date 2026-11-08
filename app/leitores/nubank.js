@@ -9,7 +9,11 @@
       const fatura = {
         cartao: 'Mastercard',
         titular: U.achar(t, /Olá,\s*([^.\n]+)\./) || U.achar(t, /\n([A-ZÀ-Ú ]{6,})\nFATURA /),
-        total: U.valor(U.achar(t, /Total a pagar\s+(R\$\s*[\d.,]+)/i)),
+        // O total certo é o do resumo ("Fatura anterior … Total a pagar"). Desde nov/2026 a 1ª página também traz uma
+        // simulação de parcelamento com outra linha "Total a pagar" (o valor se parcelar), que não pode ser usada.
+        total: U.valor(U.achar(t, /Fatura anterior[\s\S]*?\nTotal a pagar\s+(R\$\s*[\d.,]+)/i) ||
+          U.achar(t, /Pagamento total da fatura\s+(R\$\s*[\d.,]+)/i) ||
+          U.achar(t, /Total a pagar\s+(R\$\s*[\d.,]+)(?!\s+R\$)/i)),
         vencimento: U.dataExtenso(U.achar(t, /Data de vencimento:\s*([^\n]+)/i)) || U.dataExtenso(U.achar(t, /FATURA\s+(\d{1,2} \w{3} \d{4})/)),
         fechamento: U.dataExtenso(U.achar(t, /EMISSÃO E ENVIO\s+(\d{1,2} \w{3} \d{4})/i)),
         limite_total: U.valor(U.achar(t, /Limite total do cartão de crédito:\s*(R\$\s*[\d.,]+)/i)),

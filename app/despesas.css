@@ -242,3 +242,12 @@
 .rx .dp-prox-itens .qt { grid-column: 1 / -1; color: var(--color-fg-muted); }
 .rx .dp-prox-itens .dp-pi-fatura { box-shadow: inset 3px 0 0 var(--rx-vi); }
 .rx .dp-prox-pe { margin-top: var(--cds-gap-sm); color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+
+/* Despesa recorrente */
+.rx .dp-check { display: flex; gap: var(--cds-gap-sm); align-items: flex-start; cursor: pointer; padding: var(--cds-pad-sm) var(--cds-pad-md); border-radius: var(--cds-radius);
+  border: 1px solid var(--rx-ag-line); background: var(--color-panel); line-height: 1.35; }
+.rx .dp-check input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; accent-color: var(--rx-vi); }
+.rx .dp-check:has(input:checked) { border-color: color-mix(in srgb, var(--rx-vi) 55%, var(--rx-ag-line)); background: color-mix(in srgb, var(--rx-vi) 6%, var(--color-panel)); }
+.rx .dp-check:has(input:focus-visible) { outline: 2px solid var(--rx-vi); outline-offset: 2px; }
+.rx .dp-rec { color: var(--rx-vi-text); background: color-mix(in srgb, var(--rx-vi) 12%, transparent); }
+.rx .dp-prox-itens .dp-pi-recorrente { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--rx-vi) 45%, transparent); }

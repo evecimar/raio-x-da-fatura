@@ -115,6 +115,45 @@ test.describe('exemplo', () => {
     await telaSaudavel(page, 'próximos meses');
   });
 
+  test('despesa recorrente: repete todo mês e para no "até quando"', async ({ page }) => {
+    await visao(page, 'despesas');
+    const [inicio, mesAtual] = await page.evaluate(() => {
+      const d = new Date(); const m = (x) => x.toLocaleDateString('sv-SE').slice(0, 7);
+      const a = new Date(d.getFullYear(), d.getMonth() - 2, 1);
+      return [a.toLocaleDateString('sv-SE'), m(d)];
+    });
+    await page.click('#dp-nova');
+    await expect(page.locator('#dp-campo-rec-ate')).toBeHidden();
+    await page.fill('#dp-dlg-edit [name=loja]', 'Aluguel Teste');
+    await page.fill('#dp-dlg-edit [name=data]', inicio);
+    await page.fill('#dp-dlg-edit [name=total]', '1.500,00');
+    await page.selectOption('#dp-dlg-edit [name=forma]', 'pix');
+    await page.check('#dp-dlg-edit [name=recorrente]');
+    await expect(page.locator('#dp-campo-rec-ate')).toBeVisible();
+    await expect(page.locator('#dp-rec-info')).toContainText('Todo dia 1');
+    await expect(page.locator('#dp-rec-info')).toContainText('sem data para acabar');
+    await telaSaudavel(page, 'formulário recorrente');
+    await page.click('#dp-edit-ok');
+    await expect(page.locator('#dp-dlg-edit')).toBeHidden();
+    await expect(page.locator('#dp-feito')).toContainText('Ela se repete todo mês');
+    // a primeira vez e mais duas repetições (mês passado e este)
+    await page.selectOption('#rx-controles select', '*');
+    const cartoes = page.locator('#dp-notas li.dp-nota', { hasText: 'Aluguel Teste' });
+    await expect(cartoes).toHaveCount(3);
+    await expect(page.locator('#dp-notas li.dp-nota', { hasText: 'Aluguel Teste' }).getByRole('button', { name: 'Editar recorrência' })).toHaveCount(2);
+    await expect(page.locator('#dp-prox li.dp-pi-recorrente', { hasText: 'Aluguel Teste' }).first()).toBeAttached();
+    // parar neste mês: some de "Próximos meses"
+    await cartoes.getByRole('button', { name: 'Editar recorrência' }).first().click();
+    await expect(page.locator('#dp-dlg-edit [name=recorrente]')).toBeChecked();
+    await page.fill('#dp-dlg-edit [name=recorrente_ate]', mesAtual);
+    await page.click('#dp-edit-ok');
+    await expect(page.locator('#dp-dlg-edit')).toBeHidden();
+    await expect(page.locator('#dp-prox li.dp-pi-recorrente', { hasText: 'Aluguel Teste' })).toHaveCount(0);
+    await expect(cartoes.first()).toContainText('Todo mês até');
+    await telaSaudavel(page, 'despesa recorrente');
+    await expect(page.locator('#dp-notas')).not.toContainText(/\bnull\b|\bundefined\b/);
+  });
+
   test('dica "compras do mês anterior" leva ao mês da compra', async ({ page }) => {
     const meses = await page.$$eval('#rx-controles option', o => o.map(x => x.value).filter(v => v !== '*'));
     await page.selectOption('#rx-controles select', meses[meses.length - 2]);

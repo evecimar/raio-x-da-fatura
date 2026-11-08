@@ -145,6 +145,11 @@ for mi, mes in enumerate(MESES):
         notas.append(dict(arquivo=f'nota-exemplo-{mes}-{k + 1}.jpg' if k != 4 else '', origem='foto' if k != 4 else 'manual', loja=loja, cnpj=cnpj,
                           data=d.isoformat(), hora=f'{8 + k}:{(k * 7) % 60:02d}', total=round(sum(i['total'] for i in its), 2), forma=forma,
                           cartao_final='', categoria=cat, itens=its, vinculo='', vinculo_tipo='', revisar=False, avisos=[]))
+    # 2b) aluguel no Pix, digitado uma vez como despesa recorrente: o app repete todo mês
+    if mi == 0:
+        notas.append(dict(arquivo='', origem='manual', loja='Aluguel do apartamento', cnpj='', data=f'{compras_de}-05', hora='', total=1800.00,
+                          forma='pix', cartao_final='', categoria='Casa', itens=[], recorrente=True, recorrente_ate='',
+                          vinculo='', vinculo_tipo='', revisar=False, avisos=[]))
     # 3) despesa digitada no crédito, parcelada, que ainda não apareceu em nenhuma fatura (vai para "Próximos meses")
     if mes == MESES[-1]:
         notas.append(dict(arquivo='', origem='manual', loja='Móveis Exemplo', cnpj='', data=f'{mes}-18', hora='', total=1290.00, forma='credito',

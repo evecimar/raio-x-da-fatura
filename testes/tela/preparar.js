@@ -1,5 +1,5 @@
 /* Antes dos testes de tela, gera em testes/.gerado/ (fora do git):
-   - um PDF fictício por banco (a partir de testes/casos/faturas/*.js);
+   - um PDF fictício por banco (a partir de testes/casos/faturas/<banco>.js; variações de layout ficam só nos testes de lógica);
    - uma "foto" fictícia de cupom (o texto de testes/casos/notas/cupom.txt desenhado numa imagem), para o OCR. */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -10,7 +10,8 @@ module.exports = async (config) => {
   const saida = path.join(__dirname, '../.gerado');
   fs.mkdirSync(saida, { recursive: true });
   const pasta = path.join(__dirname, '../casos/faturas');
-  for (const f of fs.readdirSync(pasta).filter(f => f.endsWith('.js'))) {
+  // Um PDF por banco: só o caso principal (<banco>.js). Variações de layout (<banco>-<variação>.js) ficam nos testes de lógica.
+  for (const f of fs.readdirSync(pasta).filter(f => /^[a-z0-9]+\.js$/.test(f))) {
     const caso = require(path.join(pasta, f));
     fs.writeFileSync(path.join(saida, caso.arquivo), await gerarPdf(caso));
   }

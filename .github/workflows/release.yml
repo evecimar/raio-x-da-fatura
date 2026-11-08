@@ -28,6 +28,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
+      pull-requests: read # para achar a branch do PR do merge
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,12 +38,32 @@ jobs:
         with:
           node-version: 22
 
+      # A branch do pull request decide a versão: feat/* sobe o 2º número, fix/* o 3º; as outras não geram release.
+      - name: Branch do pull request
+        id: branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MENSAGEM: ${{ github.event.head_commit.message }}
+        run: |
+          branch=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0].head.ref // ""' 2>/dev/null || true)
+          if [ -z "$branch" ]; then
+            branch=$(node -e 'process.stdout.write(require("./ferramentas/versao.js").branchDoMerge(process.env.MENSAGEM))')
+          fi
+          echo "Branch: ${branch:-(não encontrada)}"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
       - name: Próxima versão
         id: versao
-        run: echo "versao=$(node ferramentas/versao.js)" >> "$GITHUB_OUTPUT"
+        env:
+          BRANCH: ${{ steps.branch.outputs.branch }}
+        run: |
+          versao=$(node ferramentas/versao.js "$BRANCH")
+          echo "versao=$versao" >> "$GITHUB_OUTPUT"
+          if [ -z "$versao" ]; then echo "::notice::Branch \"$BRANCH\" não é feat/* nem fix/*: sem release nova (o site é publicado de novo)."; fi
 
       - name: Empacotar o app
         id: pacote
+        if: ${{ steps.versao.outputs.versao != '' }}
         run: |
           pasta=$(node ferramentas/empacotar.js "${{ steps.versao.outputs.versao }}")
           nome=$(basename "$pasta")
@@ -50,6 +71,7 @@ jobs:
           echo "zip=dist/$nome.zip" >> "$GITHUB_OUTPUT"
 
       - name: Publicar a release
+        if: ${{ steps.versao.outputs.versao != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
           VERSAO: ${{ steps.versao.outputs.versao }}

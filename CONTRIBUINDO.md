@@ -30,10 +30,20 @@ npm test
 
 ## Fluxo
 
-1. Crie uma branch: `git switch -c minha-mudanca`.
+1. Crie uma branch com o nome no padrão (veja abaixo): `git switch -c feat/minha-mudanca`.
 2. Faça a mudança com testes e rode `npm test`.
 3. Faça push e abra um pull request. O CI roda sozinho e precisa ficar verde. A `main` não aceita push direto.
-4. Depois do merge, a release sai sozinha, com o zip do app pronto para usar. A versão sobe o último número (0.2.0 → 0.2.1). Para uma versão maior, mude `version` no `package.json` no próprio PR.
+4. Depois do merge, a release sai sozinha, com o zip do app pronto para usar. A versão depende do nome da branch.
+
+### Nome da branch e versão
+
+| Branch | Quando usar | Release no merge |
+|---|---|---|
+| `feat/<descricao>` | Funcionalidade nova (ex.: `feat/despesa-recorrente`) | Sobe o 2º número: 0.2.4 → **0.3.0** |
+| `fix/<descricao>` | Correção de erro (ex.: `fix/nubank-total`) | Sobe o 3º número: 0.2.4 → **0.2.5** |
+| `docs/`, `ci/`, `test/`, `chore/`, `refactor/` | Documentação, automação, testes, manutenção, reorganizar código sem mudar o comportamento | Sem release nova (o site é publicado de novo) |
+
+O nome vai em minúsculas, com hífen entre as palavras (`feat/despesa-recorrente`, não `feat/Despesa_Recorrente`). O CI recusa o pull request se o nome da branch estiver fora do padrão; para corrigir, crie a branch de novo com o nome certo e abra outro PR. Para pular para uma versão bem maior (1.0.0), mude `version` no `package.json` no próprio PR.
 
 ## Como os testes funcionam
 

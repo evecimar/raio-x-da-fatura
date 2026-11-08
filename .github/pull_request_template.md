@@ -19,4 +19,4 @@
 
 ## Versão
 
-A release sai sozinha no merge e sobe o último número da versão. Para uma versão maior (nova funcionalidade grande), mude `version` no `package.json` neste PR.
+A versão da release vem do **nome da branch** (o CI confere): `feat/…` sobe o 2º número (0.3.0), `fix/…` sobe o 3º (0.2.5); `docs/`, `ci/`, `test/`, `chore/` e `refactor/` não geram release. Veja [CONTRIBUINDO.md](../CONTRIBUINDO.md#nome-da-branch-e-versão).

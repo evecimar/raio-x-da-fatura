@@ -27,6 +27,13 @@ jobs:
           node-version: 22
           cache: npm
 
+      # O nome da branch decide a versão da release (feat/* → 0.X.0, fix/* → 0.0.X; docs/ci/test/chore/refactor → sem release).
+      - name: Nome da branch
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: node ferramentas/versao.js --checar "$BRANCH"
+
       - run: npm ci
 
       - name: Nenhum dado pessoal ou documento real no repositório

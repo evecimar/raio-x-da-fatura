@@ -55,10 +55,12 @@ Revise o diff procurando estes deslizes, que são comuns:
 - **Texto em inglês** na interface ou nos comentários, ou nome de função em inglês. Tudo em português do Brasil.
 - **Texto fixo sobre uma pessoa, banco ou loja** no painel. Todo destaque é calculado dos dados.
 - **Mudanças grandes demais.** Peça uma coisa por vez, e um PR por assunto.
+- **Nome de branch fora do padrão** (`claude/abc123`, `minha-mudanca`, `feature/x`). O nome decide a versão da release e o CI recusa os outros: `feat/<descricao>` para funcionalidade nova, `fix/<descricao>` para correção, `docs/`, `ci/`, `test/`, `chore/` ou `refactor/` para o resto. Peça ao agente para criar a branch assim antes do primeiro commit.
 
 ## 5. Antes de abrir o pull request
 
 - [ ] Você leu e entendeu todo o diff, não só o resumo que a IA fez.
+- [ ] A branch se chama `feat/…`, `fix/…`, `docs/…`, `ci/…`, `test/…`, `chore/…` ou `refactor/…` (é o que decide a versão).
 - [ ] `npm test` passa no seu computador (lint, tipos, testes de lógica e de tela).
 - [ ] Mexeu em leitor? `npm run testar -- sua-fatura.pdf` dá ✓, rodado por você, sem mostrar a saída para a IA.
 - [ ] `git status` não mostra PDF, foto, XML real nem a pasta `faturas/`. O CI também barra, mas não deixe chegar lá.
